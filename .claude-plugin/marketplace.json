@@ -1,0 +1,14 @@
+{
+  "name": "cadence",
+  "owner": {
+    "name": "Arbor AI",
+    "url": "https://github.com/arbor-ai-inc"
+  },
+  "plugins": [
+    {
+      "name": "cadence",
+      "source": "./",
+      "description": "Agent workflows for autonomous development: spec pipeline, issue execution, decision fan-out, and a recurrence-gated retro loop."
+    }
+  ]
+}

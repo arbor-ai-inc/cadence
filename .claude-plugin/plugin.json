@@ -1,0 +1,45 @@
+{
+  "name": "cadence",
+  "displayName": "Cadence",
+  "description": "Agent workflows for autonomous development: a two-gate spec pipeline, an issue-execution loop, decision fan-out across worktrees, and a recurrence-gated retro mechanism that turns repeat failures into enforced checks.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Arbor AI",
+    "url": "https://github.com/arbor-ai-inc"
+  },
+  "homepage": "https://github.com/arbor-ai-inc/cadence",
+  "repository": "https://github.com/arbor-ai-inc/cadence",
+  "license": "Apache-2.0",
+  "keywords": [
+    "workflow",
+    "spec-driven-development",
+    "code-review",
+    "retrospective",
+    "autonomous-agents",
+    "test-driven-development"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "userConfig": {
+    "ask_slack_bot_token": {
+      "type": "string",
+      "title": "Slack bot token",
+      "description": "xoxb- token with chat:write plus history/read on the ask channel. Only needed when [ask].provider = \"slack\"; leave blank to fall back to asking in-session.",
+      "sensitive": true,
+      "required": false
+    },
+    "ask_slack_channel_id": {
+      "type": "string",
+      "title": "Slack channel id",
+      "description": "Channel that blocking questions are posted to, e.g. C0123456789. Only needed when [ask].provider = \"slack\".",
+      "required": false
+    },
+    "tracker_api_token": {
+      "type": "string",
+      "title": "Issue tracker API token",
+      "description": "Only needed when [tracker].provider talks to an API directly. The linear provider uses your Linear MCP server and the github provider uses your existing gh CLI auth, so both leave this blank.",
+      "sensitive": true,
+      "required": false
+    }
+  }
+}
