@@ -76,6 +76,17 @@ repos:
         pass_filenames: false
         files: ^(reference/.*|skills/.*|agents/.*|adapters/.*|templates/.*|tests/check_agent_skills\.py)$
 
+      - id: install
+        name: install
+        description: >
+          Runs an adopter's whole first hour against the working tree: scaffold
+          a fresh project, then every command the docs tell them to run. The two
+          bugs that reached a real user both lived in this gap.
+        entry: python3 tests/check_install.py
+        language: system
+        pass_filenames: false
+        files: ^(tools/.*|skills/init/.*|templates/.*|\.claude-plugin/.*|tests/check_install\.py)$
+
       - id: user-docs
         name: user-docs
         description: >

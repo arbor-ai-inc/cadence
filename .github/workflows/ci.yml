@@ -63,6 +63,12 @@ jobs:
       - name: review-state reader
         run: python3 tools/review_state.py
 
+      - name: an adopter's first hour, against the working tree
+        run: python3 tests/check_install.py
+
+      - name: ...and against what people can download now
+        run: python3 tests/check_install.py --committed
+
       - name: fan-out engine
         run: python3 tests/check_fanout.py
 
