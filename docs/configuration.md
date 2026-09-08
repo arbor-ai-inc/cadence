@@ -54,11 +54,11 @@ python3 tools/cadence_config.py must-stop db/migrations/007.sql   # exit 5
 python3 tools/cadence_config.py must-stop src/ui/button.tsx       # exit 0
 ```
 
-Enforce it on every commit by installing this as a pre-commit hook:
-
-```bash
-python3 tools/fanout.py check-scope
-```
+Enforce it on every commit. Run `/cadence:init --hook` to write
+`.cadence/check-scope` into your repo, then point a pre-commit hook at that
+path. The shim is there because a hook runs in a plain shell with no
+`${CLAUDE_PLUGIN_ROOT}` and the plugin path is version-pinned; it resolves the
+plugin at run time and exits non-zero if it cannot, rather than passing.
 
 That hook is the enforcement that matters — it is derived from git rather than
 from a model's reading of a rule, and no reasoning inside a fan-out leaf gets
