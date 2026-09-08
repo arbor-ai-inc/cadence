@@ -286,6 +286,11 @@ def selftest() -> int:
         check("default boundary must be empty", cfg.must_stop == ())
         check("empty boundary must warn", "No must-stop boundary" in cfg.describe_boundary())
         check("empty boundary matches nothing", cfg.must_stop_hits(["db/migrations/001.sql"]) == [])
+        # An unconfigured boundary and a genuinely clean path both produce no
+        # hits, and must NOT report the same thing.
+        check("empty boundary is distinguishable from clean",
+              Config(root=root).must_stop == () and
+              Config(root=root, must_stop=(MustStop("x/", "y"),)).must_stop != ())
 
         cfg = Config(root=root, must_stop=(
             MustStop("db/migrations/", "a schema migration"),
@@ -380,6 +385,19 @@ def main() -> int:
             return 1
         hits = cfg.must_stop_hits(args.paths)
         if not hits:
+            if not cfg.must_stop:
+                # "clear" would be a true statement about a check that did not
+                # happen. With no boundary configured every path is clear, and
+                # that reads as safe rather than as unconfigured -- which is the
+                # exact confusion [[must_stop]] exists to prevent.
+                print(
+                    f"NOT CHECKED: no [[must_stop]] boundary is configured, so all "
+                    f"{len(args.paths)} path(s) pass trivially.\n"
+                    f"This is not the same as safe. Add entries to "
+                    f"{cfg.source or 'cadence.toml'} naming the surfaces where\n"
+                    f"being wrong is expensive and irreversible."
+                )
+                return 0
             print(f"clear: none of {len(args.paths)} path(s) are inside the must-stop boundary")
             return 0
         print("must-stop boundary crossed. Ask a human; do not decide and do not fan out.\n")

@@ -2,7 +2,7 @@
   "name": "cadence",
   "displayName": "Cadence",
   "description": "Agent workflows for autonomous development: a two-gate spec pipeline, an issue-execution loop, decision fan-out across worktrees, and a recurrence-gated retro mechanism that turns repeat failures into enforced checks.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "Arbor AI",
     "url": "https://github.com/arbor-ai-inc"
