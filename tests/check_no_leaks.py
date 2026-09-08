@@ -156,21 +156,24 @@ RULES: tuple[Rule, ...] = (
     ),
 )
 
-# CodeRabbit is a supported review provider, not a leak -- but it should appear
-# only where it is named as one implementation among several, never as the
-# assumed reviewer in a workflow doc.
+# CodeRabbit is a public product, so naming it discloses nothing about the
+# private source tree -- it is not a leak, and the first draft of this rule was
+# wrong to treat it as one. What it IS is a workflow-layer coupling risk: a
+# reference doc that says "run @coderabbitai full review" has hardcoded one
+# reviewer where the [review] provider should decide.
+#
+# So it is scoped to the workflow layer and exempt everywhere else. The first
+# draft had this exactly inverted -- exempting reference/ (where the risk
+# lives) and firing on tools/ and README.md (where naming the provider is
+# correct) -- which is why it failed on its own repository before porting a
+# single workflow doc.
 CODERABBIT = Rule(
-    "review-provider-assumed",
+    "review-provider-hardcoded",
     r"coderabbit",
-    "CodeRabbit named outside the provider layer; workflow docs must go through [review]",
+    "a workflow file names one reviewer directly; go through the [review] provider instead",
 )
-CODERABBIT_OK_PREFIXES = ("providers/", "reference/", "docs/", "templates/", "tests/")
+CODERABBIT_SCOPE = ("reference/", "skills/", "agents/", "adapters/")
 
-# Matched as whole path COMPONENTS, never as string prefixes. Prefix-matching
-# ".git" also skips ".gitignore", ".gitattributes" and everything under
-# ".github/" -- and a deploy workflow is precisely where an infra project name
-# leaks. The same off-by-a-separator bug is on record in the source repo's own
-# adapter checker, so it is not hypothetical.
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__"})
 # Multi-component prefixes, matched on the full relative path with a separator.
 SKIP_PREFIXES = ("evals/results/",)
@@ -219,7 +222,7 @@ def targets(argv_paths: list[str]) -> list[Path]:
 
 def rules_for(rel: str) -> list[Rule]:
     active = [r for r in RULES if rel not in r.exempt]
-    if not rel.startswith(CODERABBIT_OK_PREFIXES):
+    if rel.startswith(CODERABBIT_SCOPE):
         active.append(CODERABBIT)
     return active
 
@@ -272,7 +275,7 @@ PROBES: dict[str, str] = {
     "private-slack-channel": "post to #eng-standup",
     "private-model-alias": "model: fable\n",
     "product-vocabulary": "the arbor.button@2 component and --arbor-color tokens",
-    "review-provider-assumed": "run @coderabbitai full review",
+    "review-provider-hardcoded": "run @coderabbitai full review",
 }
 
 
@@ -318,6 +321,14 @@ def selftest() -> int:
         if scannable(REPO / must_skip):
             failures.append(f"{must_skip} should be skipped but is not")
 
+    # The reviewer-coupling rule must cover the workflow layer and nothing else.
+    for workflow in ("reference/git-pr-workflow.md", "skills/code-review/SKILL.md", "agents/code-reviewer.md"):
+        if not any(r.name == "review-provider-hardcoded" for r in rules_for(workflow)):
+            failures.append(f"{workflow} must be checked for a hardcoded reviewer")
+    for not_workflow in ("README.md", "tools/cadence_config.py", "providers/review/coderabbit.py", "docs/configuration.md"):
+        if any(r.name == "review-provider-hardcoded" for r in rules_for(not_workflow)):
+            failures.append(f"{not_workflow} names providers legitimately and must not be checked")
+
     for line in failures:
         print(f"selftest: {line}", file=sys.stderr)
     if failures:
@@ -346,7 +357,7 @@ def main() -> int:
             if r.exempt:
                 print(f"      exempt:  {', '.join(sorted(r.exempt))}")
             if r is CODERABBIT:
-                print(f"      exempt:  everything under {', '.join(CODERABBIT_OK_PREFIXES)}")
+                print(f"      scope:   only {', '.join(CODERABBIT_SCOPE)}")
             print()
         return 0
 
