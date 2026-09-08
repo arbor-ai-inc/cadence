@@ -10,6 +10,22 @@ from, over roughly forty tickets. The issues and pull requests have been
 renumbered; nothing else has been softened. Where a number looked bad for the
 system that produced it, it is still here.
 
+## Two kinds of reference
+
+**`C-NN` — a case in this file.** A rule that cites one is pointing at the
+measurement below.
+
+**`T-NN` — an anonymized ticket**, cited inline in `reference/` where a rule
+needs to name *which* incident without needing a whole case study. The mapping to
+real issue ids is not published.
+
+They are numbered separately and both are stable. The distinction that matters
+when reading: two different `T-NN` in one paragraph are **two different
+incidents**, and the same one repeated is one incident cited twice. That is
+load-bearing — "three separate tickets hit this" is a stronger claim than "one
+ticket hit it three times", and collapsing them to a generic "one ticket" would
+have quietly turned the first into the second.
+
 ## How to read a case
 
 Each case is one observation, not one ticket: a single ticket often hit three

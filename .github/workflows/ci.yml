@@ -44,11 +44,17 @@ jobs:
       - name: ask transport
         run: python3 tools/ask.py --selftest
 
+      - name: review-state reader
+        run: python3 tools/review_state.py
+
       - name: fan-out engine
         run: python3 tests/check_fanout.py
 
       - name: adapters stay thin and links resolve
         run: python3 tests/check_agent_skills.py
+
+      - name: generated codex adapters are fresh
+        run: python3 scripts/gen_adapters.py --check
 
   plugin:
     runs-on: ubuntu-latest

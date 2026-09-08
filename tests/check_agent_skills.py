@@ -41,23 +41,10 @@ ACK_TOKEN = "agent-skill-duplication: acknowledged"
 # the stronger rule is available: no pin at all.
 FORBIDDEN_FRONTMATTER_KEYS = ("model",)
 
-# Canonical docs not yet ported. Links to these are tolerated so that CI is
-# green on the work that HAS landed rather than uniformly red on work that has
-# not.
-#
-# This list is self-clearing: it is an error for a name here to exist on disk,
-# so it cannot quietly outlive the port and start hiding real broken links.
-# When it empties, delete it and the two references to it.
-PENDING_DOCS = {
-    "spec-pipeline.md",
-    "test-driven-development.md",
-    "execute-issue.md",
-    "decision-fanout.md",
-    "code-review.md",
-    "code-review-and-quality.md",
-    "git-pr-workflow.md",
-    "architectural-principles.starter.md",
-}
+# Every canonical doc is ported. PENDING_DOCS is empty and stays that way:
+# the guard below still fires, so re-adding a name to hide a broken link means
+# the doc must actually be absent.
+PENDING_DOCS: set[str] = set()
 
 
 def check_pending_list_is_current(errors: list[str]) -> None:
@@ -329,33 +316,36 @@ def check_adapter_thinness(
             )
         return
 
-    # The line cap is exempted for skills/ because several adapters legitimately
-    # exceed it: spec-pipeline, review-spec and draft-plan all carry a refusal
-    # condition or a hash gate that an agent must honour BEFORE it loads the
-    # canonical doc, and a cap that forces that substance out of the adapter
-    # moves it somewhere the agent reads too late.
+    # The cap applies to the AUTHORED set. It used to be off for skills/
+    # entirely, which -- once the Codex set became derived -- would have left it
+    # unable to fire anywhere at all. A cap that cannot fire is worse than no
+    # cap: it reads as a bound on adapter volume and is not one.
     #
-    # execute-issue is a deliberate exception to that thinning, not a backlog item.
-    # It grew 9 -> 21 lines to carry the decide / fan-out / ask classification, and it
-    # grew for the reason the thinning would undo: the adapter previously held only a
-    # pointer to that rule, so runs took the one branch the adapter named and
-    # decision-fanout never fired (PR #675). Relocating those lines re-creates the
-    # failure, and no check here would notice -- the classification is prose. If this
-    # adapter is thinned, the classification stays.
+    # So: 30 nonblank body lines, measured against a corpus whose median is 7.
+    # That is loose enough for the adapters that legitimately carry a refusal
+    # condition or a hash gate an agent must honour BEFORE it loads the
+    # canonical doc -- moving that substance out puts it somewhere the agent
+    # reads too late -- and tight enough to catch an adapter absorbing the
+    # procedure. Above the cap, acknowledge it explicitly with a reason.
     #
-    # Do NOT read this as "covered by the duplication checks". An earlier version of
-    # this comment claimed that and was wrong: the line comparison reaches 1.4% of
-    # canonical prose, and while canonical_paragraphs() now closes the verbatim hole
-    # at any wrapping, neither check sees a *paraphrase*. The cap is the only real
-    # bound on adapter volume, and it is off for exactly the five files with the most
-    # room to absorb canonical substance. That is a known gap, not a covered one.
-    if CLAUDE_SKILLS_DIR not in path.parents:
-        max_nonblank = 8 if path.name == "SKILL.md" else 25
+    # Do NOT read the cap as "covered by the duplication checks". It is not.
+    # The line comparison reaches a small fraction of canonical prose, and
+    # neither check sees a *paraphrase*. The cap is the only real bound on
+    # adapter volume, and it is deliberately coarse.
+    #
+    # The generated Codex set is exempt for a different and stronger reason: it
+    # is DERIVED. It can only ever be as thin as its source, it is not
+    # hand-maintained so it cannot drift on its own, and gen_adapters.py
+    # --check already fails if it diverges. Capping it would only ever fire as
+    # a duplicate of the cap on the authored file.
+    if CODEX_SKILLS_DIR not in path.parents:
+        max_nonblank = 30 if path.name == "SKILL.md" else 25
         count = len(nonblank_lines(body))
         if count > max_nonblank:
             errors.append(
-                f"{rel(path)} has {count} nonblank body lines; keep adapters thin "
-                f"or add '<!-- {ACK_TOKEN} reason=\"...\" -->'"
+                f"{rel(path)} has {count} nonblank body lines (cap {max_nonblank}); "
+                f"keep adapters thin, or acknowledge it with "
+                f"'<!-- {ACK_TOKEN} reason=\"...\" -->'"
             )
 
     body_headings = set(re.findall(r"^## .+$", body, flags=re.MULTILINE))

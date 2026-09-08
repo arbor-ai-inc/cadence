@@ -1,0 +1,41 @@
+---
+name: execute-issue
+description: >
+  Use when picking up a the tracker issue (e.g. T-31) to implement autonomously:
+  branch, build, ask via the ask transport when blocked, review, open PR. Never merges.
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Task
+---
+
+Follow the canonical procedure in `${CLAUDE_PLUGIN_ROOT}/reference/execute-issue.md` exactly.
+
+Branch = lowercased issue id off fresh main. Implement only the issue's scope.
+
+Classify every decision before asking or guessing — reversal cost and blast radius
+decide the branch, not how hard the question feels
+(`${CLAUDE_PLUGIN_ROOT}/reference/execute-issue.md` § *Decisions*):
+
+- One defensible answer, or wrong is cheap to undo → decide it and keep going.
+- A one-way door whose effects stay inside this diff → **fan out**, per
+  `${CLAUDE_PLUGIN_ROOT}/reference/decision-fanout.md`. Build each option in its own
+  worktree and run review in every leaf. This is not a question, and asking instead
+  is the failure this branch exists to prevent.
+- `must-stop`, or a `fork` refused for a cap → a Shape A decision brief
+  (`${CLAUDE_PLUGIN_ROOT}/reference/human-brief.md`) sent with
+  `python3 ${CLAUDE_PLUGIN_ROOT}/tools/ask.py ask` and issue context; mirror Q+A onto the issue.
+
+Work the `must-stop` boundary from `[[must_stop]]` in `${CLAUDE_PLUGIN_ROOT}/tools/fanout.py`,
+never from a prose summary of it.
+
+Exit 3 alone is not the ask signal: it is every `fork` refusal. Read the printed
+reason. A cap or `must-stop boundary:` is the third branch; `only N surviving
+option(s)` is the first — decide it and `record`, whatever the tool's own remedy
+line says. See `execute-issue.md` § *Decisions*.
+
+Green pre-commit + tests, then run the code-review skill to LGTM, then `gh pr create --title "<issue-id>: <summary>" --body-file <brief>` with its Shape B brief — never `--fill`, never `--body-file` alone (prompts, fails headless).
+
+Notify the ask transport with the PR URL, then **keep going** — `gh pr create` is the middle of the
+procedure, not the end. Follow `${CLAUDE_PLUGIN_ROOT}/reference/git-pr-workflow.md`
+§ *Watching the automated review* and `execute-issue.md` § *When this skill is done*
+rather than restating them.
+
+Never merge, never touch main, never force-push.

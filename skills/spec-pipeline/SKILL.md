@@ -1,0 +1,95 @@
+---
+name: spec-pipeline
+description: Orchestrates the full spec review pipeline to READY, consulting the author only for decisions. Use when asked to run the spec pipeline on a spec. Use for /cadence:spec-pipeline.
+argument-hint: <specs>/<slug>/
+---
+
+# /cadence:spec-pipeline
+
+<!-- agent-skill-duplication: acknowledged reason="An orchestration adapter. It
+carries the gate order, the hash refusals and the subagent roles because those
+decide whether the canonical doc is loaded at all, and an agent that reads them
+after starting has already skipped a gate. Everything past the summary lives in
+the canonical doc." -->
+
+Claude Code adapter for the full spec pipeline.
+Canonical workflow: `${CLAUDE_PLUGIN_ROOT}/reference/spec-pipeline.md`.
+
+For the full procedure (loop logic, circuit breaker, acknowledgment, edit
+batching), follow `${CLAUDE_PLUGIN_ROOT}/reference/spec-pipeline.md` exactly.
+
+## Procedure (summary)
+
+Two gates: **Gate 1 (product)** reviews `<[paths].specs>/<slug>/product.md`; **Gate 2
+(eng design)** reviews `<[paths].specs>/<slug>/design.md` against
+`the project's `[paths].principles` rubric`.
+
+1. Validate: `<[paths].specs>/<slug>/product.md` exists. A single-file `<[paths].specs>/<slug>.md` is a
+   legacy **read-only** spec — stop and say it must be split into `product.md` and
+   `design.md` before the pipeline can run on it (`spec-pipeline.md` § *Spec File
+   Structure*).
+2. Detect state from `<[paths].specs>/<slug>/review/` and resume. Read the latest
+   round's `verdict` and `blockers` **before** invoking any reviewer — a gate
+   already at zero blockers is closed, and step 3's stop rule applies to it.
+3. Loop: review (`product-spec-reviewer` at Gate 1, `eng-design-reviewer` at
+   Gate 2) → edit mechanical, **in one pass covering every blocker in the
+   round** → batch author decisions as Shape A briefs
+   (`${CLAUDE_PLUGIN_ROOT}/reference/human-brief.md`), never raw round-file prose.
+   Claude Code has a picker, so use `AskUserQuestion`; fall back to
+   `python3 python3 ${CLAUDE_PLUGIN_ROOT}/tools/ask.py ask` (block on reply) only when the
+   author is not in the session.
+   - **STOP RULE — the loop enforces this, not the reviewer.** Apply the state
+     table in `spec-pipeline.md` § *The rule: freeze the artifact at the first
+     READY verdict*. Read it there and follow it; **do not restate or
+     paraphrase it here** — three copies of one rule is how the copies drift.
+     Its inputs are the latest round for the **current** gate (filter on
+     `gate:`), that round's `blockers`, and whether its recorded hash still
+     matches the artifact (recompute with `spec_hash.py`).
+     - The expected outcome is the table's row 2 — zero blockers, hash matches,
+       gate closed. **Do not apply advisory (MAJOR / MINOR) edits** and do not
+       invoke a reviewer: open the gate's PR.
+     - Any edit to the artifact costs a full round. Never re-point a hash around
+       a post-verdict edit.
+   - **Before opening either gate's PR:** write
+     `<[paths].specs>/<slug>/review/carried-advisories.md` dispositioning every open
+     advisory as a next-gate criterion, a PR comment, or a the tracker follow-up
+     issue labelled `<slug>-followup`, **or `no follow-up` carrying the
+     author's stated reason** — the canonical contract has four outcomes, not
+     three, and dropping the fourth forces a ticket for an advisory the author
+     explicitly closed. File the the tracker issues you do decide on, with the
+     finding restated to stand alone plus why it was filed rather than fixed,
+     and record their ids in the file. A gate that closes with advisories and no
+     such file has not finished closing. See `spec-pipeline.md`
+     § *Dispositioning the advisories*.
+   - **At PRODUCT_READY — product PR gate:** stop editing `product.md`, commit it
+     + its Gate 1 rounds and `carried-advisories.md` to a branch, open PR
+     `spec(product): <slug>`, and
+     **STOP** (do NOT draft `design.md`, do NOT self-merge). The author merges
+     it. On the next run the drafter — gated on `product.md` being on `main` —
+     writes `design.md` and the loop continues at Gate 2.
+   - Repeat until DESIGN_READY.
+4. At DESIGN_READY: stop editing `design.md`, write `carried-advisories.md` per
+   step 3 and `<[paths].specs>/<slug>/review/ack-round-N.md` — the decomposition, advisory open
+   items and cumulative mechanical-edit changelog written as a **Shape B change
+   brief** (`${CLAUDE_PLUGIN_ROOT}/reference/human-brief.md`), not raw round-file
+   prose, since the author is ratifying edits made without asking. Then open the
+   **design PR** (`spec(design): <slug>` with `design.md` + Gate 2 rounds +
+   `carried-advisories.md` + ack) and **STOP** for author review + merge.
+   **The author's PR approval is the acknowledgment — do not send a separate
+   `slack_ask.py` ack request**; the brief is read on the PR. File the
+   **decomposition** to the tracker after the design
+   PR merges — different from the advisory follow-up issues in step 3, which are filed
+   *before* the gate's PR so their ids land in `carried-advisories.md`. Only the task
+   graph waits for the merge. See
+   the [PR Gates] and [Acknowledgment] sections of the canonical doc.
+5. Circuit breaker: if blockers do not strictly decrease over 3 consecutive
+   rounds, escalate all open questions to author via `slack_ask.py ask`.
+
+Compute hashes via `python3 ${CLAUDE_PLUGIN_ROOT}/tools/spec_hash.py` before each review
+invocation (`spec` mode on `product.md` / `design.md`). Invoke
+`product-spec-reviewer`, `eng-design-reviewer`, and `spec-editor` by their
+registered subagent names.
+
+The `model:` above binds this turn only, and the pipeline spans many. On resuming a
+run, check the active model before continuing: `spec-pipeline.md` § *Model pins* has
+which pins are durable and which are not.

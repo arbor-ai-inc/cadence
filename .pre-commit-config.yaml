@@ -38,6 +38,16 @@ repos:
         pass_filenames: false
         files: ^tools/ask\.py$
 
+      - id: review-state
+        name: review-state
+        description: >
+          Four signals render a passing state for a review that never ran. This
+          reader is the one place that reasoning lives, so it is self-tested.
+        entry: python3 tools/review_state.py
+        language: system
+        pass_filenames: false
+        files: ^tools/review_state\.py$
+
       - id: fanout
         name: fanout
         description: >
@@ -47,6 +57,16 @@ repos:
         language: system
         pass_filenames: false
         files: ^(tools/(fanout|cadence_config)\.py|tests/check_fanout\.py)$
+
+      - id: gen-adapters
+        name: gen-adapters
+        description: >
+          The Codex adapters are derived from the Claude ones. Two authored sets
+          is two places to correct when a workflow changes.
+        entry: python3 scripts/gen_adapters.py --check
+        language: system
+        pass_filenames: false
+        files: ^(skills/.*|adapters/.*|scripts/gen_adapters\.py)$
 
       - id: agent-skills
         name: agent-skills
