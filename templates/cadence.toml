@@ -50,8 +50,17 @@ timeout_seconds = 3600
 #                read around (a rate-limited, skipped or stale review all
 #                render as a passing check row)
 #   codex      — `codex exec` as a local adversarial reviewer, pre-PR
-#   subagent   — the bundled code-reviewer subagent, fresh context
+#   claude     — `claude -p` as a local adversarial reviewer, pre-PR. Use this
+#                when the agent DRIVING the work is not Claude Code: Codex
+#                cannot invoke a Claude subagent, but it can shell out to the
+#                Claude CLI, which gets you a genuinely different reviewer.
+#   subagent   — the bundled code-reviewer subagent, fresh context. Claude Code
+#                only: it needs the Task tool.
 #   none       — no automated reviewer; workflows skip the watch loop
+#
+# The point of all four is a reviewer that did not write the code. Pick whichever
+# is a DIFFERENT agent from the one implementing, and prefer that over whichever
+# is most convenient.
 provider = "none"
 # The reviewer's login, for reading verdicts off the PR.
 # bot_login = "coderabbitai[bot]"
@@ -74,10 +83,24 @@ review_standards = "docs/code-review-standards.md"
 
 
 [models]
-# Model per role. Any alias your harness accepts.
-default = "sonnet"
-# reviewer = "opus"       # adversarial review benefits from the stronger model
-# spec = "opus"
+# ADVISORY. Cadence cannot switch your model, and this key does not try to.
+#
+# Why: a skill's `model:` pin applies only to the turn that invoked it, then
+# your session model resumes. The spec pipeline stops to ask you questions, so
+# it spans many turns — meaning a pin covers the first one and nothing after.
+# No hook can change a model, and there is no per-role override.
+#
+# What this key DOES: a workflow checks the model it is running on against it,
+# and if they differ it says so and stops instead of quietly continuing. That
+# turns a silent degrade into a choice you get to make. It is the whole
+# mechanism, and it is worth having — the failure it prevents is invisible.
+#
+# To actually set a model, use Claude Code's own setting, which is durable:
+#   .claude/settings.json   ->  { "model": "opus" }
+# or switch for one session with /model before you start.
+#
+# Leave it unset if you do not care which model runs a workflow.
+# recommended = "opus"
 
 
 [retro]

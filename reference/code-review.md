@@ -10,26 +10,50 @@ Also invoked automatically by the execute-issue skill (step 7).
 
 ## Reviewer selection
 
-1. Preferred: Codex CLI, non-interactive: pipe the review prompt to `codex exec`
-   with the branch diff (`git diff main...HEAD`), the issue's acceptance criteria,
-   and the reading set named in [Architectural context to load](#architectural-context-to-load).
-   Codex has no persistent reviewer definition, so the prompt is the only place
-   that context can arrive — naming the files is not optional here.
-2. Fallback (Codex unavailable — log why): launch the `code-reviewer` subagent
-   (`${CLAUDE_PLUGIN_ROOT}/agents/code-reviewer.md`) via the Task tool. Fresh context, never the
-   context that implemented the change. Its definition already carries the reading
-   set, so pass the diff and acceptance criteria plus anything task-specific.
+**The one rule: the reviewer must not be the agent that wrote the code.** Fresh
+context, and preferably a different model or a different agent entirely. Every
+option below exists to satisfy that; which one you pick is `[review].provider`
+in `cadence.toml`.
 
-Which reviewer runs is `[review].provider` in `cadence.toml`: `codex` for the
-first, `subagent` for the second, or `none` to skip the automated pass entirely —
-in which case say so in the findings rather than letting a review nobody ran read
-as a review that found nothing.
+| `[review].provider` | What runs | Works when driving with |
+|---|---|---|
+| `codex` | `codex exec`, piped the branch diff | anything with the Codex CLI |
+| `claude` | `claude -p`, piped the branch diff | anything with the Claude CLI |
+| `subagent` | the bundled `code-reviewer` subagent, fresh context | **Claude Code only** — it needs the Task tool |
+| `coderabbit` | a PR-time bot; not a pre-PR pass | anything |
+| `none` | nothing | — |
 
-Both reviewers must end up with the same inputs. The asymmetry to watch is that
-the subagent gets the reading set from its own definition while Codex — the
-*preferred* reviewer — gets it only from the prompt you construct. A review run
-without it is a correctness review, not an architecture review; say so in the
-findings rather than implying the boundary questions were checked.
+**Pick the one that is a different agent from the one implementing.** If Claude
+Code is doing the work, `codex` is the stronger choice; if Codex is doing the
+work, `claude` is. `subagent` is the fallback when only one agent is available —
+still fresh context, but the same model, so it is the weakest of the three at
+finding what that model missed the first time.
+
+### Driving with Codex
+
+`subagent` is unavailable: Codex has no Task tool, so it cannot invoke a Claude
+subagent. Use `claude` instead — shelling out to the Claude CLI gets you the same
+cross-agent review from the other direction.
+
+The **spec pipeline** is a separate matter and does not have this escape hatch.
+Its reviewers are subagents with deliberately restricted tools —
+`Read, Grep, Glob, Write`, and no `Edit` — and that restriction is what stops a
+reviewer editing the spec it is reviewing. Under an agent without subagents the
+roles collapse into one context and that guarantee is gone. Run the spec
+pipeline from Claude Code, or accept that the separation is by convention only
+and say so.
+
+### Passing the reviewer its inputs
+
+Whichever provider runs, it must end up with the same three things: the branch
+diff (`git diff main...HEAD`), the issue's acceptance criteria, and the reading
+set named in [Architectural context to load](#architectural-context-to-load).
+
+**The asymmetry to watch:** the `subagent` provider gets the reading set from its
+own definition, while a CLI provider gets it **only from the prompt you
+construct**. So naming those files is not optional for `codex` or `claude`. A
+review run without them is a correctness review, not an architecture review —
+say so in the findings rather than implying the boundary questions were checked.
 
 ## Architectural context to load
 
