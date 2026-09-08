@@ -13,8 +13,8 @@ writes them anywhere.
 Check what is in effect at any time:
 
 ```bash
-python3 tools/cadence_config.py
-python3 tools/cadence_config.py --json
+./.cadence/cadence config
+./.cadence/cadence config --json
 ```
 
 **A missing `cadence.toml` is fine and supported.** The defaults assume GitHub,
@@ -50,8 +50,8 @@ anything shipped to third parties.
 Check a path against it:
 
 ```bash
-python3 tools/cadence_config.py must-stop db/migrations/007.sql   # exit 5
-python3 tools/cadence_config.py must-stop src/ui/button.tsx       # exit 0
+./.cadence/cadence must-stop db/migrations/007.sql   # exit 5
+./.cadence/cadence must-stop src/ui/button.tsx       # exit 0
 ```
 
 Enforce it on every commit. Run `/cadence:init --hook` to write
@@ -126,8 +126,8 @@ say so explicitly rather than reporting an unrun review as settled.
 Read review state with the reader, never the check row:
 
 ```bash
-python3 tools/review_state.py --pr 123
-python3 tools/review_state.py --pr 123 --json
+./.cadence/cadence review-state --pr 123
+./.cadence/cadence review-state --pr 123 --json
 ```
 
 **A check row renders `pass` for a skipped, rate-limited, paused and stale

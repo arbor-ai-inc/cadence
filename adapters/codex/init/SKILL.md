@@ -17,6 +17,12 @@ python3 .cadence/tools/init_project.py --retros
 
 Add `--hook` to also write `.cadence/check-scope`, the shim a commit hook calls — needed before any autonomous run, because it is what actually enforces `[[must_stop]]`. Add `--all` for the optional templates (principles rubric, review standards, spec templates, tools inventory). Add `--dry-run` to show what would happen first. It never overwrites — an existing file is reported as kept.
 
+**Never edit the project's hook config yourself without asking.** The script writes `.cadence/check-scope`; wiring it into `.pre-commit-config.yaml` (or whatever runs their hooks) is a change to their build. **Propose the exact block and let the author apply it**, or ask first. Two runs of this skill that make different decisions there is not a reproducible setup.
+
+When you propose it, say precisely what it gates: it refuses a commit **only on a `fan/*` branch or inside a fan-out worktree**. On main or an ordinary feature branch it is a no-op. So it bounds fan-out; it does **not** protect those paths on every commit, and an author reading eight `[[must_stop]]` entries may reasonably assume otherwise.
+
+**Check `.gitignore` covers `.cadence/fanout/` and `.cadence/worktrees/`.** Leaf worktrees inside the repo will otherwise show up as untracked files. `.cadence/cadence` and `.cadence/check-scope` stay tracked on purpose.
+
 **Then do the two things the script prints, because the files alone do nothing:**
 
 1. **Set `[commands].lint` and `[commands].test`.** Read them from the project — a Makefile, a CI workflow, a package manifest, a contributing guide — rather than asking. Put the whole command in, including venv activation and env vars. Offer what you found and let the author correct it.
