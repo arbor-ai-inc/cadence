@@ -13,16 +13,117 @@ set of opinions about process. Several of these rules were argued down during
 review and are narrower than their first draft; a few say plainly that they are
 a known gap rather than a solved problem.
 
-## Install
+## Setup
+
+### 1. Install the plugin
 
 ```bash
 /plugin marketplace add arbor-ai-inc/cadence
 /plugin install cadence@cadence
 ```
 
-Then read [`docs/getting-started.md`](docs/getting-started.md). Nothing needs
-configuring to try it — the defaults assume GitHub, no issue tracker, and asking
-questions in-session, which needs no credentials.
+Nothing is configured yet, and it already works. Try the router:
+
+```
+/cadence:using-agent-skills
+```
+
+The defaults assume git and GitHub, no issue tracker, and asking questions in
+the current session — **no credentials, no config file.** Everything below is
+opt-in, in the order it pays off.
+
+### 2. Tell it how your project lints and tests
+
+Copy [`templates/cadence.toml`](templates/cadence.toml) to your repository root
+and set two keys:
+
+```toml
+[commands]
+lint = "pre-commit run --all-files"   # whatever yours is, in full
+test = "pytest"
+```
+
+Cadence runs these verbatim, so put the whole incantation in — venv activation,
+env vars, workspace filters. Workflows refer to *"the lint command"* and never
+hardcode one. Check what is in effect with:
+
+```bash
+python3 tools/cadence_config.py
+```
+
+A missing `cadence.toml` is fine. A malformed one raises rather than falling back
+to defaults, because silently running on defaults when you wrote a config is how
+a safety boundary stops being enforced.
+
+### 3. Start the retro ledger
+
+> `<plugin>` below is wherever the plugin installed — under
+> `~/.claude/plugins/`. `${CLAUDE_PLUGIN_ROOT}` resolves inside a skill but not
+> in your shell, so copy the path once from `/plugin list`.
+
+
+This is the highest-value thing here and it takes one command:
+
+```bash
+mkdir -p docs/retros/pending docs/retros/archive
+touch docs/retros/pending/.gitkeep docs/retros/archive/.gitkeep
+cp <plugin>/templates/TRAPS.md docs/retros/
+cp <plugin>/templates/_fragment_template.md docs/retros/
+```
+
+From now on every PR leaves one fragment naming what it taught. At 15 fragments,
+run `/cadence:retro-synthesis`. **Write no rules before then** — that judgement
+is exactly what the count table exists to overrule.
+
+### 4. Before you let it run unattended: the must-stop boundary
+
+`/cadence:execute-issue` will branch, implement, review and open a PR without
+you. **Set the boundary before you use it**, because that is what makes the
+autonomy safe rather than fast:
+
+```toml
+[[must_stop]]
+path = "db/migrations/"
+reason = "a schema migration"
+
+[[must_stop]]
+path = "src/billing/"
+reason = "money-bearing logic"
+```
+
+These are the surfaces where an agent must **stop and ask** — never decide,
+never fan out. Only you know where yours are, so cadence ships none, and **an
+empty boundary means an autonomous run will never stop for a human.**
+
+`path` ending in `/` covers that directory and everything under it; without a
+trailing slash it is an exact file. `reason` is required — it is what the agent
+shows you when it stops.
+
+Then enforce it, which is the part that matters:
+
+```bash
+# as a pre-commit hook
+python3 <plugin>/tools/fanout.py check-scope
+```
+
+That hook is derived from git, not from a rule in a prompt, so no reasoning
+inside a run gets past it. **Absent enforcement and working enforcement look
+identical from inside a run**, which is why `fanout.py init` warns when the hook
+is missing.
+
+### 5. Optional: the rest
+
+| Want | Set | Notes |
+|---|---|---|
+| An issue tracker | `[tracker].provider` | `linear`, `github`, or `none` (body passed inline) |
+| Unattended runs | `[ask].provider = "slack"` | needs a bot token; otherwise questions come to your session |
+| An automated PR reviewer | `[review].provider` | `coderabbit`, `codex`, `subagent`, or `none` |
+| The spec pipeline | `[paths].principles` | Gate 2 grades against this file and nothing else — write it first, from [the starter](templates/architectural-principles.starter.md) |
+| Approval policy | `[paths].review_standards` | who signs off, what blocks a merge — from [the template](templates/code-review-standards.template.md) |
+
+Full reference: [`docs/configuration.md`](docs/configuration.md). Adoption order
+and what to expect: [`docs/getting-started.md`](docs/getting-started.md).
+Different stack: [`docs/porting.md`](docs/porting.md).
 
 ## What is in it
 
@@ -71,18 +172,6 @@ request** before any engineering design exists. The design is then graded agains
 a rubric you supply. Each artifact is hash-frozen at its first `READY` verdict, so
 a spec cannot drift out from under the review that approved it.
 
-## Configuration
-
-One file at your repo root. [`templates/cadence.toml`](templates/cadence.toml)
-documents every key; [`docs/configuration.md`](docs/configuration.md) explains
-the choices that matter.
-
-Issue tracker, human-ask transport and automated reviewer are pluggable, with
-zero-setup fallbacks for each. The one section with no useful default is
-`[[must_stop]]` — the surfaces where an agent must stop and ask. Only you know
-where those are, and **an empty boundary means an autonomous run will never stop
-for a human.**
-
 ## Layout
 
 ```
@@ -91,7 +180,8 @@ skills/        thin Claude Code adapters that route to them
 agents/        subagent definitions (reviewers, editor)
 adapters/codex/  the same adapters for Codex, generated
 tools/         fanout, spec hashing, ask transport, review state
-templates/     cadence.toml, spec templates, the retro ledger, a principles rubric
+templates/     cadence.toml, spec templates, the retro ledger, a principles
+               rubric, a review-policy template, a tools inventory stub
 examples/      the measurements the rules cite
 evals/         graded cases pinning four rules an agent has reason to break
 tests/         the gates

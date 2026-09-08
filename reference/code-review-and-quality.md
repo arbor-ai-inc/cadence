@@ -28,6 +28,10 @@ Load the smallest context that explains the change:
   `[paths].principles` § *How code review uses this doc*.
 - **New, moved or retired routes, RPCs or topics**: `[paths].principles`, for
   whether this crosses a boundary and what must move with it if it does.
+- **Who must approve, and what blocks the merge**: `[paths].review_standards`.
+  Cadence describes how to review; that file is your project's policy on who
+  signs off. Start from
+  [`templates/code-review-standards.template.md`](../templates/code-review-standards.template.md).
 - **Security-sensitive changes**: your own security guidance, plus the
   [`security-auditor`](./personas/security-auditor.md) persona.
 - **Component changes**: that component's README, nearby code, nearby tests.

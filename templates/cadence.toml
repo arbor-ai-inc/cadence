@@ -67,6 +67,10 @@ retros = "docs/retros"
 # templates/architectural-principles.starter.md and make it yours — a rubric
 # nobody wrote is a rubric nobody applies.
 principles = "docs/architectural-principles.md"
+# Who must approve what, and which gates block a merge. Cadence describes how to
+# review; this is your policy on who signs off. Start from
+# templates/code-review-standards.template.md.
+review_standards = "docs/code-review-standards.md"
 
 
 [models]
