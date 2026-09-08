@@ -76,6 +76,16 @@ repos:
         pass_filenames: false
         files: ^(reference/.*|skills/.*|agents/.*|adapters/.*|templates/.*|tests/check_agent_skills\.py)$
 
+      - id: plugin-manifest
+        name: plugin-manifest
+        description: >
+          plugin.json's agents key is an array of file paths, so adding an agent
+          without touching the manifest ships one the plugin never registers.
+        entry: python3 tests/check_agent_skills.py
+        language: system
+        pass_filenames: false
+        files: ^(\.claude-plugin/plugin\.json|agents/.*)$
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

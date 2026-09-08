@@ -1,0 +1,20 @@
+{
+  "docs": {
+    "code-review-and-quality.md": "b62c4b347f6b1c95",
+    "code-review.md": "3ff1c03f293f655e",
+    "decision-fanout.md": "0ed1fb37c15ca3b3",
+    "draft-plan.md": "7ed0afa4ee34670c",
+    "execute-issue.md": "d8dee38ffc94ff12",
+    "git-pr-workflow.md": "bebd6304e0a281b7",
+    "human-brief.md": "474e0048e86c4221",
+    "retro-synthesis.md": "5dfe3dd7e526fb06",
+    "retro.md": "46c9d8f5a30131bb",
+    "review-spec.md": "bc53664ba275791f",
+    "skill-anatomy.md": "ac9d6889b24d2266",
+    "spec-driven-development.md": "e0d7d476904824e1",
+    "spec-pipeline.md": "93c40f5e9e114e63",
+    "test-driven-development.md": "b424e18705ae5f81",
+    "using-agent-skills.md": "2bcdacef3780552b"
+  },
+  "upstream_head": "0a64212"
+}

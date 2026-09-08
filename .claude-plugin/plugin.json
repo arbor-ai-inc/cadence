@@ -19,7 +19,12 @@
     "test-driven-development"
   ],
   "skills": "./skills/",
-  "agents": "./agents/",
+  "agents": [
+    "./agents/code-reviewer.md",
+    "./agents/eng-design-reviewer.md",
+    "./agents/product-spec-reviewer.md",
+    "./agents/spec-editor.md"
+  ],
   "userConfig": {
     "ask_slack_bot_token": {
       "type": "string",

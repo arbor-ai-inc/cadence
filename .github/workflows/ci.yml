@@ -64,3 +64,10 @@ jobs:
         run: |
           python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
           python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
+      # The `agents` key takes an array of file paths, not a directory. A
+      # directory string parses as JSON and is rejected only here, so the
+      # parse check above is not a substitute for this one.
+      - name: plugin validates
+        run: npx --yes @anthropic-ai/claude-code@latest plugin validate ./
+        continue-on-error: true
