@@ -47,6 +47,44 @@ FORBIDDEN_FRONTMATTER_KEYS = ("model",)
 PENDING_DOCS: set[str] = set()
 
 
+def check_plugin_manifest(errors: list[str]) -> None:
+    """plugin.json's `agents` array must list exactly the files on disk.
+
+    `agents` takes an ARRAY OF FILE PATHS, not a directory -- a directory string
+    is rejected by `claude plugin validate`, which is how this was found. The
+    consequence of the array form is drift: adding agents/<new>.md without
+    touching the manifest ships a subagent the plugin never registers, and
+    nothing at runtime says so. Removing one leaves a path to a missing file.
+    """
+    import json
+
+    manifest = ROOT / ".claude-plugin" / "plugin.json"
+    if not manifest.exists():
+        errors.append("missing .claude-plugin/plugin.json")
+        return
+    try:
+        declared = json.loads(manifest.read_text(encoding="utf-8")).get("agents", [])
+    except json.JSONDecodeError as exc:
+        errors.append(f"{rel(manifest)} is not valid JSON: {exc}")
+        return
+
+    if isinstance(declared, str):
+        errors.append(
+            f"{rel(manifest)} declares agents as a string; it must be an array of "
+            f"file paths, or `claude plugin validate` rejects it"
+        )
+        return
+
+    on_disk = sorted(f"./agents/{p.name}" for p in CLAUDE_AGENTS_DIR.glob("*.md"))
+    for missing in sorted(set(on_disk) - set(declared)):
+        errors.append(
+            f"{missing} exists but is not in plugin.json's agents array, so the "
+            f"plugin will not register it"
+        )
+    for absent in sorted(set(declared) - set(on_disk)):
+        errors.append(f"plugin.json's agents array names {absent}, which does not exist")
+
+
 def check_pending_list_is_current(errors: list[str]) -> None:
     """A ported doc must leave PENDING_DOCS, or the list starts hiding real breaks."""
     for name in sorted(PENDING_DOCS):
@@ -388,6 +426,7 @@ def main() -> int:
         print("\n".join(errors), file=sys.stderr)
         return 1
 
+    check_plugin_manifest(errors)
     check_pending_list_is_current(errors)
     check_canonical_links(errors)
     canonical_lines = duplicated_canonical_lines()

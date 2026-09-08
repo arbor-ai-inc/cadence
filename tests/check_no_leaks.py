@@ -184,6 +184,13 @@ CODERABBIT_SCOPE_EXEMPT = ("reference/providers/",)
 # so a bare command or a prose mention still fires.
 CODERABBIT_LINK_OK = "providers/coderabbit.md"
 
+# The marketplace coordinate is how anyone installs this, so it has to appear in
+# the install instructions. It is the one place the org name is a URL rather than
+# an attribution, and it is exempted the same narrow way as the provider link:
+# only when every occurrence on the line is part of the coordinate, so a prose
+# mention beside it still fires.
+INSTALL_COORDINATE = "arbor-ai-inc/cadence"
+
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__"})
 # Multi-component prefixes, matched on the full relative path with a separator.
 SKIP_PREFIXES = ("evals/results/",)
@@ -250,6 +257,10 @@ def scan(path: Path) -> list[tuple[int, str, str, str]]:
         for m in rule.compiled().finditer(text):
             # Report the line, not the offset: a reviewer needs to open it.
             lineno = text.count("\n", 0, m.start()) + 1
+            if rule.name == "company-name":
+                line = text.splitlines()[lineno - 1]
+                if line.count(INSTALL_COORDINATE) >= line.lower().count("arbor"):
+                    continue
             if rule is CODERABBIT:
                 line = text.splitlines()[lineno - 1]
                 # A pointer to the provider notes is the intended pattern. Only
@@ -324,6 +335,14 @@ def selftest() -> int:
         failures.append("rules_for('README.md') still applies company-name")
     if not any(r.name == "company-name" for r in rules_for("reference/retro.md")):
         failures.append("rules_for('reference/retro.md') does not apply company-name")
+    # The install coordinate is exempt; a prose mention beside it is not.
+    coord_only = "/plugin marketplace add arbor-ai-inc/cadence"
+    if not (coord_only.count(INSTALL_COORDINATE) >= coord_only.lower().count("arbor")):
+        failures.append("the bare install coordinate should be exempt")
+    coord_plus = "install arbor-ai-inc/cadence, built by Arbor"
+    if coord_plus.count(INSTALL_COORDINATE) >= coord_plus.lower().count("arbor"):
+        failures.append("a prose company mention beside the coordinate must NOT be exempted")
+
     # The provider-notes link is exempt; a bare command on the same line is not.
     link_only = "see [`providers/coderabbit.md`](./providers/coderabbit.md) for the command"
     if CODERABBIT.compiled().search(link_only) and not (
