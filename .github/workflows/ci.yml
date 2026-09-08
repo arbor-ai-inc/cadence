@@ -25,6 +25,9 @@ jobs:
           git fetch --depth=2 origin "${{ github.base_ref || 'main' }}" || true
           python3 tests/check_version_bumped.py --selftest
 
+      - name: adopter-runnable doc commands
+        run: python3 tests/check_user_docs.py
+
       - name: config loader
         run: python3 tools/cadence_config.py --selftest
 
@@ -44,6 +47,9 @@ jobs:
         run: |
           git fetch --depth=2 origin "${{ github.base_ref || 'main' }}" || true
           python3 tests/check_version_bumped.py --selftest
+
+      - name: adopter-runnable doc commands
+        run: python3 tests/check_user_docs.py
 
       - name: config loader
         run: python3 tools/cadence_config.py --selftest

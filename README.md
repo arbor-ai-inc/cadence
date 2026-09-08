@@ -64,8 +64,13 @@ filters — all of it. Workflows refer to *"the lint command"* and never hardcod
 one. Check what it read:
 
 ```bash
-python3 tools/cadence_config.py     # or ask /cadence:init to show you
+./.cadence/cadence config
 ```
+
+`/cadence:init` writes that shim into your repo. It exists because the plugin's
+own path is version-pinned and `${CLAUDE_PLUGIN_ROOT}` only expands inside a
+skill — so a plain shell, a Makefile and a hook config all need something
+stable to call. `./.cadence/cadence --help` lists the rest.
 
 A missing `cadence.toml` is fine. A malformed one raises rather than falling
 back to defaults, because silently running on defaults when you wrote a config
@@ -261,6 +266,10 @@ cannot sit in every session's context, and a rule that exists in two places has
 already started to drift.
 
 ## Verifying it
+
+**For contributors, run from a clone of this repo** — these are cadence's own
+gates, not something an adopter needs. In your own project the equivalent is
+`./.cadence/cadence config`.
 
 ```bash
 python3 tests/check_no_leaks.py           # nothing private survived the extraction

@@ -45,7 +45,7 @@ an adversarial pass with fresh context — never the context that wrote the chan
 which is most of where the value is.
 
 The rule worth internalising immediately: **a passing check row can mean the
-reviewer never ran.** Read `python3 tools/review_state.py --pr <n>` instead.
+reviewer never ran.** Read `./.cadence/cadence review-state --pr <n>` instead.
 
 ## Day three: autonomous execution
 
