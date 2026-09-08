@@ -280,6 +280,9 @@ python3 tools/review_state.py             # self-test
 python3 scripts/gen_adapters.py --check
 python3 tests/check_agent_skills.py
 python3 tests/check_fanout.py             # 69 tests over real git worktrees
+python3 tests/check_install.py            # an adopter's first hour, end to end
+python3 tests/check_user_docs.py          # no doc command an adopter cannot run
+python3 tests/check_version_bumped.py     # a shipped change bumps the version
 claude plugin validate ./
 ```
 
