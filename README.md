@@ -32,48 +32,53 @@ The defaults assume git and GitHub, no issue tracker, and asking questions in
 the current session — **no credentials, no config file.** Everything below is
 opt-in, in the order it pays off.
 
-### 2. Tell it how your project lints and tests
+### 2. Set it up in your project
 
-Copy [`templates/cadence.toml`](templates/cadence.toml) to your repository root
-and set two keys:
+```
+/cadence:init
+```
+
+That creates `cadence.toml` and the retro ledger. It never overwrites anything —
+an existing file is reported and left alone.
+
+Prefer a shell? The same thing, without needing to know where the plugin lives:
+
+```bash
+python3 "$(dirname "$(command -v claude)")/../plugins/cache/cadence/cadence/*/tools/init_project.py" --retros
+```
+
+That path is ugly on purpose — it is why `/cadence:init` exists. The script sits
+beside the templates and finds them relative to itself, so nothing has to know
+the install location.
+
+Then set two keys in `cadence.toml`:
 
 ```toml
 [commands]
-lint = "pre-commit run --all-files"   # whatever yours is, in full
+lint = "pre-commit run --all-files"   # yours, in full
 test = "pytest"
 ```
 
-Cadence runs these verbatim, so put the whole incantation in — venv activation,
-env vars, workspace filters. Workflows refer to *"the lint command"* and never
-hardcode one. Check what is in effect with:
+Cadence runs these verbatim, so include venv activation, env vars, workspace
+filters — all of it. Workflows refer to *"the lint command"* and never hardcode
+one. Check what it read:
 
 ```bash
-python3 tools/cadence_config.py
+python3 tools/cadence_config.py     # or ask /cadence:init to show you
 ```
 
-A missing `cadence.toml` is fine. A malformed one raises rather than falling back
-to defaults, because silently running on defaults when you wrote a config is how
-a safety boundary stops being enforced.
+A missing `cadence.toml` is fine. A malformed one raises rather than falling
+back to defaults, because silently running on defaults when you wrote a config
+is how a safety boundary stops being enforced.
 
-### 3. Start the retro ledger
+### 3. The retro ledger
 
-> `<plugin>` below is wherever the plugin installed — under
-> `~/.claude/plugins/`. `${CLAUDE_PLUGIN_ROOT}` resolves inside a skill but not
-> in your shell, so copy the path once from `/plugin list`.
+`/cadence:init` already made `docs/retros/`. From now on every PR leaves one
+fragment naming what it taught. At 15 fragments, run
+`/cadence:retro-synthesis`.
 
-
-This is the highest-value thing here and it takes one command:
-
-```bash
-mkdir -p docs/retros/pending docs/retros/archive
-touch docs/retros/pending/.gitkeep docs/retros/archive/.gitkeep
-cp <plugin>/templates/TRAPS.md docs/retros/
-cp <plugin>/templates/_fragment_template.md docs/retros/
-```
-
-From now on every PR leaves one fragment naming what it taught. At 15 fragments,
-run `/cadence:retro-synthesis`. **Write no rules before then** — that judgement
-is exactly what the count table exists to overrule.
+**Write no rules before then** — that judgement is exactly what the count table
+exists to overrule.
 
 ### 4. Before you let it run unattended: the must-stop boundary
 
@@ -101,10 +106,26 @@ shows you when it stops.
 
 Then enforce it, which is the part that matters:
 
-```bash
-# as a pre-commit hook
-python3 <plugin>/tools/fanout.py check-scope
+Then enforce it, which is the part that matters:
+
 ```
+/cadence:init --hook
+```
+
+That writes `.cadence/check-scope` into your repo. Point a pre-commit hook at it:
+
+```yaml
+- id: cadence-scope
+  entry: ./.cadence/check-scope
+  language: system
+  pass_filenames: false
+  always_run: true
+```
+
+The shim exists because a hook runs in a plain shell — no
+`${CLAUDE_PLUGIN_ROOT}` — and the plugin's own path is version-pinned, so
+neither can go in a hook config. The shim resolves it at run time, and **fails
+loudly if it cannot**, rather than passing.
 
 That hook is derived from git, not from a rule in a prompt, so no reasoning
 inside a run gets past it. **Absent enforcement and working enforcement look

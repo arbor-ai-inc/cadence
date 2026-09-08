@@ -22,18 +22,12 @@ Try the router first:
 Start here even if you never adopt anything else. It is the piece with no public
 equivalent, and it costs almost nothing per ticket.
 
-1. Copy [`templates/cadence.toml`](../templates/cadence.toml) to your repo root
-   and set `[commands].lint` and `[commands].test`. Two lines.
-2. Create the ledger:
-
-   ```bash
-   mkdir -p docs/retros/pending docs/retros/archive
-   touch docs/retros/pending/.gitkeep docs/retros/archive/.gitkeep
-   cp <plugin>/templates/TRAPS.md docs/retros/TRAPS.md
-   cp <plugin>/templates/_fragment_template.md docs/retros/
-   ```
-3. From now on, every pull request leaves one fragment naming what it taught.
-   That is it — no rules, no judgment, just an observation and what it cost.
+1. Run `/cadence:init`. That creates `cadence.toml` and the retro ledger, and
+   never overwrites anything that already exists.
+2. Set `[commands].lint` and `[commands].test` in `cadence.toml`. Two lines.
+3. From now on, every pull request leaves one fragment in
+   `docs/retros/pending/` naming what it taught. That is it — no rules, no
+   judgement, just an observation and what it cost.
 4. When `pending/` reaches 15, run `/cadence:retro-synthesis`.
 
 **Do not write rules before then**, however obvious a lesson feels. That
@@ -61,10 +55,17 @@ before the autonomy does.
 
 **Fill in `[[must_stop]]` first**, and install the scope hook:
 
-```bash
-# in .pre-commit-config.yaml, or your hook runner of choice
-python3 <plugin>/tools/fanout.py check-scope
 ```
+/cadence:init --hook
+```
+
+writes `.cadence/check-scope`. Point your hook runner at that stable in-repo
+path — `entry: ./.cadence/check-scope`, `always_run: true`.
+
+Do not try to call the plugin's `fanout.py` directly from a hook. A hook runs in
+a plain shell with no `${CLAUDE_PLUGIN_ROOT}`, and the plugin path is
+version-pinned, so it breaks on the next release. The shim resolves it at run
+time and fails loudly if it cannot find it.
 
 Then set `[tracker].provider`, and `[ask].provider = "slack"` if you want runs
 that continue while you are asleep.

@@ -41,6 +41,17 @@ ACK_TOKEN = "agent-skill-duplication: acknowledged"
 # the stronger rule is available: no pin at all.
 FORBIDDEN_FRONTMATTER_KEYS = ("model",)
 
+# Skills with no canonical doc, and no need for one. The canonical/adapter split
+# exists so a WORKFLOW has exactly one authoritative statement that adapters
+# route to. A setup action has no procedure to be authoritative about — writing
+# reference/init.md to describe "run this script" would be the ceremony
+# skill-anatomy tells authors not to add.
+#
+# Kept as an explicit list rather than a heuristic: a workflow adapter that
+# loses its canonical doc must still fail, and it would not if the rule were
+# relaxed to "only check when the doc happens to exist".
+NO_CANONICAL_DOC = frozenset({"init"})
+
 # Every canonical doc is ported. PENDING_DOCS is empty and stays that way:
 # the guard below still fires, so re-adding a name to hide a broken link means
 # the doc must actually be absent.
@@ -358,10 +369,13 @@ def check_skill_adapter(path: Path, errors: list[str]) -> None:
         errors.append(f"{rel(path)} description must include trigger text: 'Use when'")
 
     expected_doc = CANONICAL_DIR / f"{skill_name}.md"
-    if not expected_doc.exists():
+    if skill_name not in NO_CANONICAL_DOC and not expected_doc.exists():
         errors.append(
             f"{rel(path)} must point to an existing canonical doc at {rel(expected_doc)}"
         )
+        return
+
+    if skill_name in NO_CANONICAL_DOC:
         return
 
     expected_ref = rel(expected_doc)
