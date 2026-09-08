@@ -55,14 +55,37 @@ DISPATCH = r"""#!/usr/bin/env bash
 #   ./.cadence/cadence review-state --pr <n>  # honest review state
 #   ./.cadence/cadence spec-hash spec <file>
 #   ./.cadence/cadence ask <args>
+#   ./.cadence/cadence root                   # which plugin directory it resolved
 set -euo pipefail
 
 if [ -n "${CADENCE_PLUGIN_ROOT:-}" ]; then
   root="$CADENCE_PLUGIN_ROOT"
 else
-  # Newest installed version wins. `sort -V` so 0.10.0 beats 0.9.0.
-  root="$(find "$HOME/.claude/plugins" -maxdepth 5 -type d -name tools -path '*cadence*' 2>/dev/null \
-          | sed 's|/tools$||' | sort -V | tail -1)"
+  # Prefer the INSTALLED version under cache/, newest first (`sort -V`, so
+  # 0.10.0 beats 0.9.0).
+  #
+  # Not a single find over the whole plugins tree: that also matches the
+  # marketplace clone, and "marketplaces" sorts after "cache", so the clone
+  # always won. The clone advances on `/plugin marketplace update` while the
+  # installed plugin only advances on `/plugin update` — so the loser was the
+  # version the SKILLS come from. Skills on one version and tools on another is
+  # a mismatch nothing reports.
+  # `|| true` is load-bearing: find exits non-zero when the directory does not
+  # exist, and under `set -euo pipefail` that kills the script silently.
+  root="$(find "$HOME/.claude/plugins/cache" -maxdepth 4 -type d -name tools -path '*cadence*' 2>/dev/null \
+          | sed 's|/tools$||' | sort -V | tail -1 || true)"
+
+  # Fall back to the marketplace clone only if nothing is installed — which
+  # means the marketplace was added but the plugin never installed, so the
+  # skills are not active either. Say so rather than working silently.
+  if [ -z "${root:-}" ]; then
+    root="$(find "$HOME/.claude/plugins/marketplaces" -maxdepth 3 -type d -name tools -path '*cadence*' 2>/dev/null \
+            | sed 's|/tools$||' | sort -V | tail -1 || true)"
+    if [ -n "${root:-}" ]; then
+      echo "cadence: using the marketplace clone at $root — no INSTALLED version found." >&2
+      echo "  The plugin's skills are probably not active. Run: /plugin install cadence@cadence" >&2
+    fi
+  fi
 fi
 
 if [ -z "${root:-}" ] || [ ! -d "$root/tools" ]; then
@@ -86,6 +109,7 @@ case "$cmd" in
   spec-hash)    exec python3 "$root/tools/spec_hash.py" "$@" ;;
   ask)          exec python3 "$root/tools/ask.py" "$@" ;;
   init)         exec python3 "$root/tools/init_project.py" "$@" ;;
+  root)         echo "$root"; exit 0 ;;
   ""|-h|--help)
     sed -n '4,20p' "$0" | sed 's/^# \{0,1\}//'
     exit 0 ;;

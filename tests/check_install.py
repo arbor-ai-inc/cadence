@@ -196,6 +196,36 @@ def main() -> int:
         check("re-running init does not overwrite",
               "# MINE" in (proj / "cadence.toml").read_text())
 
+        # -- the shim must prefer the INSTALLED version over a clone -------
+        # A single find over the whole plugins tree also matched the marketplace
+        # clone, and "marketplaces" sorts after "cache", so the clone always
+        # won. The clone advances on a marketplace update while the installed
+        # plugin only advances on a plugin update -- so the loser was the version
+        # the SKILLS come from, and nothing reported the mismatch.
+        #
+        # Asked of the SHIM, via its `root` subcommand. An earlier version of
+        # this check asserted on the shim's source text and reimplemented the
+        # search itself, and passed while the shim was broken -- because it was
+        # testing neither the shim nor its behaviour.
+        fake_home = tmp / "home"
+        installed = fake_home / ".claude" / "plugins" / "cache" / "cadence" / "cadence" / "0.9.0"
+        clone = fake_home / ".claude" / "plugins" / "marketplaces" / "cadence"
+        for d in (installed, clone):
+            (d / "tools").mkdir(parents=True)
+
+        r = run([str(shim), "root"], proj, {"HOME": str(fake_home), "CADENCE_PLUGIN_ROOT": ""})
+        check("the shim resolves the installed version, not the clone",
+              r.stdout.strip() == str(installed),
+              f"resolved {r.stdout.strip()!r}, wanted the cache copy")
+
+        # With nothing installed it may fall back to the clone, but must say so.
+        shutil.rmtree(installed.parent.parent.parent)
+        r = run([str(shim), "root"], proj, {"HOME": str(fake_home), "CADENCE_PLUGIN_ROOT": ""})
+        check("with nothing installed it falls back to the clone",
+              r.stdout.strip() == str(clone), f"resolved {r.stdout.strip()!r}")
+        check("and warns that the skills are probably inactive",
+              "plugin install" in r.stderr, r.stderr.strip()[:120])
+
         # -- the shim must fail LOUD, never pass, without the plugin -------
         r = run([str(shim), "check-scope"], proj, {"CADENCE_PLUGIN_ROOT": "/nonexistent"})
         check("the shim fails loudly with no plugin", r.returncode != 0, f"got {r.returncode}")
