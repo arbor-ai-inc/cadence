@@ -31,25 +31,24 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Populated as phases land. Listed here from the start so an unwired
-      # suite is visible as a missing step rather than as a passing job --
-      # `suite-not-wired-to-ci` is a trap this project ships a rule about, and
-      # an unrun suite and a green suite look identical from the outside.
+      # Every suite is listed explicitly and unconditionally. A step that
+      # skips when a file is absent makes an unrun suite and a passing suite
+      # look identical, which is the trap in examples/case-studies.md C-10.
+
+      - name: config loader
+        run: python3 tools/cadence_config.py --selftest
+
+      - name: hash contract
+        run: python3 tools/spec_hash.py --selftest
+
+      - name: ask transport
+        run: python3 tools/ask.py --selftest
+
       - name: fan-out engine
-        run: |
-          if [ -f tests/check_fanout.py ]; then
-            python3 tests/check_fanout.py
-          else
-            echo "::notice::tests/check_fanout.py not yet ported (phase 2)"
-          fi
+        run: python3 tests/check_fanout.py
 
       - name: adapters stay thin and links resolve
-        run: |
-          if [ -f tests/check_agent_skills.py ]; then
-            python3 tests/check_agent_skills.py
-          else
-            echo "::notice::tests/check_agent_skills.py not yet ported (phase 2)"
-          fi
+        run: python3 tests/check_agent_skills.py
 
   plugin:
     runs-on: ubuntu-latest
