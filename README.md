@@ -277,11 +277,29 @@ claude plugin validate ./
 Each of those has been shown to fail, not just to pass. `check_fanout.py` is
 mutation-tested against the boundary matcher; breaking it fails 14 tests.
 
+## Updating
+
+Cadence pins your install to `plugin.json`'s `version`, so an update is three
+steps, not one:
+
+```
+/plugin marketplace update cadence     # refresh the marketplace clone
+/plugin update cadence@cadence         # actually install the new version
+/reload-plugins                        # or start a new session
+```
+
+New skills will not appear until the last step. If a skill you expect is
+missing, check `/plugin list` against the version you meant to install — a
+stale clone and a stale install look identical from the `/` menu.
+
 ## Contributing
 
-Read [`reference/skill-anatomy.md`](reference/skill-anatomy.md) first. Two rules
-that catch most first attempts: **never pin `model:`** in anything shipped, and
-**never edit a generated adapter** — edit its source and regenerate.
+Read [`reference/skill-anatomy.md`](reference/skill-anatomy.md) first. Three
+rules that catch most first attempts: **never pin `model:`** in anything
+shipped, **never edit a generated adapter** (edit its source and regenerate),
+and **bump `plugin.json`'s `version`** whenever you change something users
+receive — otherwise every existing install silently stays on the old copy.
+`tests/check_version_bumped.py` enforces the last one.
 
 If a rule here is wrong for your project, that is expected: put the correction in
 your own repo, per
