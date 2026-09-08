@@ -20,6 +20,11 @@ jobs:
       - name: no leaks from the private source tree
         run: python3 tests/check_no_leaks.py
 
+      - name: version bumped when content ships
+        run: |
+          git fetch --depth=2 origin "${{ github.base_ref || 'main' }}" || true
+          python3 tests/check_version_bumped.py --selftest
+
       - name: config loader
         run: python3 tools/cadence_config.py --selftest
 
@@ -34,6 +39,11 @@ jobs:
       # Every suite is listed explicitly and unconditionally. A step that
       # skips when a file is absent makes an unrun suite and a passing suite
       # look identical, which is the trap in examples/case-studies.md C-10.
+
+      - name: version bumped when content ships
+        run: |
+          git fetch --depth=2 origin "${{ github.base_ref || 'main' }}" || true
+          python3 tests/check_version_bumped.py --selftest
 
       - name: config loader
         run: python3 tools/cadence_config.py --selftest
