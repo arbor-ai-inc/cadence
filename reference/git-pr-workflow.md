@@ -442,6 +442,12 @@ Suggested body:
 
 ## Review Process
 
+**Who must approve what is `[paths].review_standards`, not this doc.** Cadence
+describes the review loop; the approval policy — required reviewers, code
+owners, which gates block a merge, who may bypass — is per-project and lives
+there. Read it before assuming a PR needs an approval, or that it does not.
+
+
 - Self-review the diff before asking for review.
 - Use [`code-review`](./code-review.md) **before the PR is opened**, not merely before
   merge, for non-trivial changes — the skill's own contract is "before the PR is opened

@@ -80,6 +80,7 @@ class Config:
     specs_dir: str = "specs"
     retros_dir: str = "docs/retros"
     principles_path: str = "docs/architectural-principles.md"
+    review_standards_path: str = "docs/code-review-standards.md"
 
     models: dict = field(default_factory=lambda: {"default": "sonnet"})
 
@@ -221,6 +222,7 @@ def load(start: Path | None = None) -> Config:
         specs_dir=paths.get("specs", Config.specs_dir),
         retros_dir=paths.get("retros", Config.retros_dir),
         principles_path=paths.get("principles", Config.principles_path),
+        review_standards_path=paths.get("review_standards", Config.review_standards_path),
         models=raw.get("models", {"default": "sonnet"}),
         synthesis_threshold=int(retro.get("synthesis_threshold", Config.synthesis_threshold)),
         max_leaves=int(fanout.get("max_leaves", Config.max_leaves)),
