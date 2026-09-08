@@ -173,6 +173,16 @@ CODERABBIT = Rule(
     "a workflow file names one reviewer directly; go through the [review] provider instead",
 )
 CODERABBIT_SCOPE = ("reference/", "skills/", "agents/", "adapters/")
+# ...except a provider-notes directory, whose entire purpose is to name one
+# provider and document its specifics. The neutral workflow doc says "the
+# configured reviewer"; reference/providers/<name>.md says exactly which
+# command that provider needs and why. Suppressing the specifics would have
+# thrown away the most useful part of the corpus.
+CODERABBIT_SCOPE_EXEMPT = ("reference/providers/",)
+# A neutral doc is SUPPOSED to link to the provider notes; that link contains
+# the provider's name and is not a hardcoding. Only this exact form is allowed,
+# so a bare command or a prose mention still fires.
+CODERABBIT_LINK_OK = "providers/coderabbit.md"
 
 SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__"})
 # Multi-component prefixes, matched on the full relative path with a separator.
@@ -222,7 +232,7 @@ def targets(argv_paths: list[str]) -> list[Path]:
 
 def rules_for(rel: str) -> list[Rule]:
     active = [r for r in RULES if rel not in r.exempt]
-    if rel.startswith(CODERABBIT_SCOPE):
+    if rel.startswith(CODERABBIT_SCOPE) and not rel.startswith(CODERABBIT_SCOPE_EXEMPT):
         active.append(CODERABBIT)
     return active
 
@@ -240,6 +250,13 @@ def scan(path: Path) -> list[tuple[int, str, str, str]]:
         for m in rule.compiled().finditer(text):
             # Report the line, not the offset: a reviewer needs to open it.
             lineno = text.count("\n", 0, m.start()) + 1
+            if rule is CODERABBIT:
+                line = text.splitlines()[lineno - 1]
+                # A pointer to the provider notes is the intended pattern. Only
+                # exempt the line when every occurrence on it is part of that
+                # path, so a link sitting beside a bare command still fires.
+                if line.count(CODERABBIT_LINK_OK) >= line.lower().count("coderabbit"):
+                    continue
             hits.append((lineno, rule.name, m.group(0).strip(), rule.why))
     return sorted(hits)
 
@@ -307,6 +324,16 @@ def selftest() -> int:
         failures.append("rules_for('README.md') still applies company-name")
     if not any(r.name == "company-name" for r in rules_for("reference/retro.md")):
         failures.append("rules_for('reference/retro.md') does not apply company-name")
+    # The provider-notes link is exempt; a bare command on the same line is not.
+    link_only = "see [`providers/coderabbit.md`](./providers/coderabbit.md) for the command"
+    if CODERABBIT.compiled().search(link_only) and not (
+        link_only.count(CODERABBIT_LINK_OK) >= link_only.lower().count("coderabbit")
+    ):
+        failures.append("a bare link to the provider notes should be exempt")
+    both = "run `@coderabbitai full review`, see [x](./providers/coderabbit.md)"
+    if both.count(CODERABBIT_LINK_OK) >= both.lower().count("coderabbit"):
+        failures.append("a line carrying a bare command must NOT be exempted by a link beside it")
+
     # An issue id gets no exemption anywhere, including the attributed files.
     if not any(r.name == "private-issue-id" for r in rules_for("README.md")):
         failures.append("private-issue-id must not be exempt in README.md")
@@ -325,7 +352,8 @@ def selftest() -> int:
     for workflow in ("reference/git-pr-workflow.md", "skills/code-review/SKILL.md", "agents/code-reviewer.md"):
         if not any(r.name == "review-provider-hardcoded" for r in rules_for(workflow)):
             failures.append(f"{workflow} must be checked for a hardcoded reviewer")
-    for not_workflow in ("README.md", "tools/cadence_config.py", "providers/review/coderabbit.py", "docs/configuration.md"):
+    for not_workflow in ("README.md", "tools/cadence_config.py", "docs/configuration.md",
+                         "reference/providers/coderabbit.md"):
         if any(r.name == "review-provider-hardcoded" for r in rules_for(not_workflow)):
             failures.append(f"{not_workflow} names providers legitimately and must not be checked")
 
@@ -358,6 +386,7 @@ def main() -> int:
                 print(f"      exempt:  {', '.join(sorted(r.exempt))}")
             if r is CODERABBIT:
                 print(f"      scope:   only {', '.join(CODERABBIT_SCOPE)}")
+                print(f"      except:  {', '.join(CODERABBIT_SCOPE_EXEMPT)}")
             print()
         return 0
 
