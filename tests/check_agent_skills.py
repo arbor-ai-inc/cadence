@@ -47,6 +47,38 @@ FORBIDDEN_FRONTMATTER_KEYS = ("model",)
 PENDING_DOCS: set[str] = set()
 
 
+PLUGIN_ROOT_REF = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([A-Za-z0-9_./-]+)")
+
+
+def check_plugin_root_paths(errors: list[str]) -> None:
+    """Every ${CLAUDE_PLUGIN_ROOT}/... path must exist in the repo.
+
+    That variable resolves to the plugin's install directory, which is a copy of
+    this repo — so a path that does not exist here will not exist there either.
+
+    This is the failure mode with the worst signal: an adapter whose body points
+    at a missing canonical doc still loads, still reads as a valid skill, and
+    the agent simply proceeds without the procedure. Nothing errors. It is only
+    visible by checking, which is what this does.
+    """
+    searched = (
+        sorted(ROOT.glob("skills/*/SKILL.md"))
+        + sorted(CLAUDE_AGENTS_DIR.glob("*.md"))
+        + sorted(CANONICAL_DIR.rglob("*.md"))
+        + sorted((ROOT / "templates").glob("*.md"))
+    )
+    for path in searched:
+        for match in PLUGIN_ROOT_REF.finditer(read(path)):
+            # Trailing punctuation is prose, not part of the path.
+            target = match.group(1).rstrip(".")
+            if not (ROOT / target).exists():
+                errors.append(
+                    f"{rel(path)} references ${{CLAUDE_PLUGIN_ROOT}}/{target}, which does "
+                    f"not exist. An adapter pointing at a missing doc still loads and the "
+                    f"agent proceeds without the procedure."
+                )
+
+
 def check_plugin_manifest(errors: list[str]) -> None:
     """plugin.json's `agents` array must list exactly the files on disk.
 
@@ -426,6 +458,7 @@ def main() -> int:
         print("\n".join(errors), file=sys.stderr)
         return 1
 
+    check_plugin_root_paths(errors)
     check_plugin_manifest(errors)
     check_pending_list_is_current(errors)
     check_canonical_links(errors)
