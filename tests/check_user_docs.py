@@ -30,9 +30,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Read by adopters. reference/ is excluded: those docs are loaded BY a skill,
-# where ${CLAUDE_PLUGIN_ROOT} does expand.
-USER_DOCS = ("README.md", "docs/configuration.md", "docs/getting-started.md", "docs/porting.md")
+# Read by adopters: the README and everything in docs/. Discovered rather than
+# listed, because a hardcoded list is one more thing to forget -- the first
+# version of this file named four files, a fifth was added, and it went
+# unchecked silently. Coverage is opt-OUT, so a new doc is covered by default.
+#
+# reference/ is excluded on purpose: those docs are loaded BY a skill, where
+# ${CLAUDE_PLUGIN_ROOT} does expand, so a plugin-relative path is correct there.
+def user_docs() -> list[str]:
+    docs = [p.relative_to(ROOT).as_posix() for p in sorted((ROOT / "docs").glob("*.md"))]
+    return ["README.md", *docs]
+
 
 # A command that only works with this repo as the working directory.
 PLUGIN_RELATIVE = re.compile(r"python3\s+(?:tools|tests|scripts)/[\w/.]+\.py")
@@ -99,6 +107,14 @@ def selftest() -> int:
     shim = "```bash\n./.cadence/cadence config\n```\n"
     check("the shim form is fine", offending_lines(shim) == [])
 
+    # Coverage must be discovered, not listed, or a new doc is silently unchecked.
+    found = user_docs()
+    check("the README is covered", "README.md" in found)
+    check("every docs/*.md is covered",
+          all(f"docs/{p.name}" in found for p in (ROOT / "docs").glob("*.md")))
+    check("reference/ is not treated as user-facing",
+          not any(f.startswith("reference/") for f in found))
+
     for line in failures:
         print(f"selftest: {line}", file=sys.stderr)
     if failures:
@@ -116,7 +132,7 @@ def main() -> int:
         return selftest()
 
     problems = []
-    for name in USER_DOCS:
+    for name in user_docs():
         path = ROOT / name
         if not path.exists():
             problems.append(f"{name}: missing")
@@ -135,7 +151,8 @@ def main() -> int:
               f"working directory it assumes.", file=sys.stderr)
         return 1
 
-    print(f"check_user_docs: ok ({len(USER_DOCS)} user-facing docs)")
+    print(f"check_user_docs: ok ({len(user_docs())} user-facing docs: "
+          f"{', '.join(user_docs())})")
     return 0
 
 

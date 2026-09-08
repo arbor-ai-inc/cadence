@@ -1,5 +1,9 @@
 # Getting started
 
+**Mechanics are in [`setup.md`](./setup.md)** — ten numbered steps, what is
+required, what skipping costs. This doc is the other question: which workflow to
+adopt first, and what to expect from each.
+
 Cadence is a set of workflows, not a framework. You can adopt one and ignore the
 rest, and the order below is the one that pays off soonest.
 
