@@ -1,0 +1,120 @@
+# cadence.toml — per-project configuration for the cadence plugin.
+#
+# Copy this to your repository root and edit. Commit it: every value here
+# describes the project, not the person. Secrets are configured per-user at
+# plugin install time instead (see `/plugin` and the `userConfig` prompts).
+#
+# Every section is optional. With no file at all cadence runs with the defaults
+# shown here, which assume GitHub, no issue tracker, and in-session questions —
+# a combination that needs no credentials.
+
+[commands]
+# How this project lints and tests. Cadence runs these verbatim, so put the
+# whole incantation here — venv activation, env vars, workspace filters, all of
+# it. Workflows refer to "the lint command" and never hardcode one.
+lint = "pre-commit run --all-files"
+test = "pytest"
+# Optional: a faster subset for the inner loop. Falls back to `test`.
+# test_fast = "pytest -x -q tests/unit"
+
+
+[tracker]
+# Where issues live.
+#   linear  — via your Linear MCP server
+#   github  — via `gh issue`
+#   none    — no tracker; the issue body is passed to the workflow inline
+provider = "none"
+# Recognises an issue id in a prompt, and names the branch. The first capture
+# group, lowercased, becomes the branch name.
+issue_key = "^([A-Z]{2,5}-[0-9]+)$"
+# Workflow states to move an issue through. Omit any your tracker lacks.
+# state_started = "In Progress"
+# state_in_review = "In Review"
+
+
+[ask]
+# How a workflow asks a human a blocking question.
+#   harness — ask in the current session (AskUserQuestion). No setup.
+#   slack   — post to a channel and block on a reply. Needs the userConfig
+#             token and channel id. Use this for unattended runs.
+#   stdout  — print and read stdin. For scripted or CI use.
+provider = "harness"
+# How long the slack provider waits before treating a question as unanswered.
+# A timeout is "unanswered", never an answer, and never self-answered.
+timeout_seconds = 3600
+
+
+[review]
+# The automated reviewer that runs on a pull request.
+#   coderabbit — CodeRabbit, including the four false-pass signals it needs
+#                read around (a rate-limited, skipped or stale review all
+#                render as a passing check row)
+#   codex      — `codex exec` as a local adversarial reviewer, pre-PR
+#   subagent   — the bundled code-reviewer subagent, fresh context
+#   none       — no automated reviewer; workflows skip the watch loop
+provider = "none"
+# The reviewer's login, for reading verdicts off the PR.
+# bot_login = "coderabbitai[bot]"
+# Post-PR review rounds before a workflow stops and reports what is unresolved.
+max_rounds = 3
+
+
+[paths]
+# Where cadence keeps its artifacts, relative to the repo root.
+specs = "specs"
+retros = "docs/retros"
+# The rubric Gate 2 grades a design against. Start from
+# templates/architectural-principles.starter.md and make it yours — a rubric
+# nobody wrote is a rubric nobody applies.
+principles = "docs/architectural-principles.md"
+
+
+[models]
+# Model per role. Any alias your harness accepts.
+default = "sonnet"
+# reviewer = "opus"       # adversarial review benefits from the stronger model
+# spec = "opus"
+
+
+[retro]
+# Fragments required before /cadence:retro-synthesis will run a batch. Exact,
+# not approximate: below this a single ticket cannot tell a recurring trap from
+# an anecdote, which is the whole reason capture and synthesis are separate.
+synthesis_threshold = 15
+
+
+[fanout]
+# Caps on the decision fan-out tree. The combinatorics break first, not the
+# token cost. A refusal is always recorded and printed, never silently applied.
+max_leaves = 8
+max_depth = 3
+max_options = 3
+
+
+# --- must-stop boundary ---
+#
+# Surfaces where an agent must STOP and ask rather than decide or fan out. This
+# is the one section with no useful default: it is the list of places where
+# being wrong is expensive and irreversible in YOUR system, and only you know
+# them. An empty list means an autonomous run will never stop for a human,
+# which is almost never what you want.
+#
+# `path` ending in "/" means that directory and everything under it. Without a
+# trailing slash it is an exact file — so `models.py` does not also match
+# `models.py.bak`.
+#
+# Good candidates: schema and migrations, published API contracts, anything on
+# a serving or payment critical path, money or ranking logic, audit trails, and
+# anything shipped to third parties.
+
+# [[must_stop]]
+# path = "db/migrations/"
+# reason = "a schema migration"
+#
+# [[must_stop]]
+# path = "api/openapi.yaml"
+# reason = "a published contract other teams build against"
+#
+# [[must_stop]]
+# path = "src/billing/"
+# reason = "money-bearing logic"

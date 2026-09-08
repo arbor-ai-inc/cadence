@@ -1,0 +1,32 @@
+# Cadence's own hooks. Adopters do not need these -- they configure their lint
+# command in cadence.toml instead. These guard this repository's release.
+repos:
+  - repo: local
+    hooks:
+      - id: no-leaks
+        name: no-leaks
+        description: >
+          Fail if anything from the private source tree survives into a
+          publishable file. Runs on every commit because the cost of noticing
+          late is a public git history that cannot be un-published.
+        entry: python3 tests/check_no_leaks.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: cadence-config
+        name: cadence-config
+        description: The config loader and the must-stop matcher are load-bearing for every workflow.
+        entry: python3 tools/cadence_config.py --selftest
+        language: system
+        pass_filenames: false
+        files: ^(tools/cadence_config\.py|templates/cadence\.toml)$
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace

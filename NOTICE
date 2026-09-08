@@ -1,0 +1,10 @@
+Cadence
+Copyright 2026 Arbor AI, Inc.
+
+This product includes software developed at Arbor AI, Inc.
+
+Cadence was extracted from Arbor AI's internal engineering workflow system.
+The workflows, the decision fan-out engine, and the recurrence-gated retro
+mechanism were built and measured against a production codebase before being
+generalized for release. Occurrence counts and case studies in this repository
+are real measurements; the underlying issues have been renumbered.

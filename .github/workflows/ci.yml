@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The leak gate runs first and alone. Everything else in this repo is
+      # only publishable if this passes, so a failure here should be the whole
+      # signal rather than one red line among many.
+      - name: no leaks from the private source tree
+        run: python3 tests/check_no_leaks.py
+
+      - name: config loader
+        run: python3 tools/cadence_config.py --selftest
+
+  suites:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Populated as phases land. Listed here from the start so an unwired
+      # suite is visible as a missing step rather than as a passing job --
+      # `suite-not-wired-to-ci` is a trap this project ships a rule about, and
+      # an unrun suite and a green suite look identical from the outside.
+      - name: fan-out engine
+        run: |
+          if [ -f tests/check_fanout.py ]; then
+            python3 tests/check_fanout.py
+          else
+            echo "::notice::tests/check_fanout.py not yet ported (phase 2)"
+          fi
+
+      - name: adapters stay thin and links resolve
+        run: |
+          if [ -f tests/check_agent_skills.py ]; then
+            python3 tests/check_agent_skills.py
+          else
+            echo "::notice::tests/check_agent_skills.py not yet ported (phase 2)"
+          fi
+
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: manifests parse
+        run: |
+          python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+          python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"

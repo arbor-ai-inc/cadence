@@ -1,0 +1,17 @@
+# The case map ties public case ids (C-NN) back to private issue ids. It is
+# maintained alongside the private source repo and must never be published;
+# tests/check_no_leaks.py fails if a file by this name is ever found here.
+casemap.json
+
+# Local fan-out state and worktrees, per tools/fanout.py
+.cadence/fanout/
+.cadence/worktrees/
+
+# Eval output
+evals/results/
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
