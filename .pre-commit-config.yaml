@@ -22,6 +22,40 @@ repos:
         pass_filenames: false
         files: ^(tools/cadence_config\.py|templates/cadence\.toml)$
 
+      - id: spec-hash
+        name: spec-hash
+        description: The normalization contract decides whether a frozen gate detects an edit.
+        entry: python3 tools/spec_hash.py --selftest
+        language: system
+        pass_filenames: false
+        files: ^tools/spec_hash\.py$
+
+      - id: ask-transport
+        name: ask-transport
+        description: The four exit codes are a contract every workflow branches on.
+        entry: python3 tools/ask.py --selftest
+        language: system
+        pass_filenames: false
+        files: ^tools/ask\.py$
+
+      - id: fanout
+        name: fanout
+        description: >
+          69 tests over real git worktrees. Slow (~30s) but this is the only gate
+          on an engine that creates and deletes branches.
+        entry: python3 tests/check_fanout.py
+        language: system
+        pass_filenames: false
+        files: ^(tools/(fanout|cadence_config)\.py|tests/check_fanout\.py)$
+
+      - id: agent-skills
+        name: agent-skills
+        description: Adapters stay thin, frontmatter is valid, and reference/ links resolve.
+        entry: python3 tests/check_agent_skills.py
+        language: system
+        pass_filenames: false
+        files: ^(reference/.*|skills/.*|agents/.*|adapters/.*|templates/.*|tests/check_agent_skills\.py)$
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
