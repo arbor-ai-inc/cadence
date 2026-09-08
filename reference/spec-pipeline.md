@@ -194,6 +194,46 @@ load-bearing rule: **product-gate closure is a merged PR, not just a verdict.**
   [Editing on a gate PR](#editing-on-a-gate-pr)). The decomposition is filed to
   Linear after this PR merges.
 
+### Watching the review on a gate PR
+
+**A gate PR is a pull request, so whatever reviews your pull requests reviews it.**
+That was a gap for a long time: the pipeline opened the PR, stopped, and nothing
+looked at the review. Comments arrived on `product.md` and `design.md` and the
+author found them by chance or not at all. "Recorded, not applied" presumes
+somebody read them, and no step made sure.
+
+So after opening either gate PR, and before telling the author it is ready:
+
+1. **Read the review state**, once the reviewer has had time to start:
+
+   ```bash
+   python3 tools/review_state.py --pr "${PR:?}"
+   ```
+
+   With `[review].provider = "none"` this reports that no reviewer is configured
+   and there is nothing to read. Say that in the handoff — it is not the same as
+   a review that has not landed yet, and the two look identical if you only
+   report silence.
+
+2. **Never read the check row instead.** It renders `pass` for a skipped,
+   rate-limited, paused and stale review alike. Nine measured occurrences:
+   [`C-09`](../examples/case-studies.md#c-09--a-reviewer-that-reports-success-without-running).
+
+3. **Surface every finding to the author, in the handoff.** Inline comments and
+   the review **body** are different surfaces, and a finding whose line falls
+   outside the diff lands in the body — which no thread count reflects. Provider
+   specifics are in [`providers/`](./providers/).
+
+4. **Do not apply them.** This is the one place a gate PR differs from a code
+   PR: an edit to the artifact here **reopens the gate** and needs a fresh full
+   round before merge (see [Editing on a gate PR](#editing-on-a-gate-pr)). So a
+   reviewer finding on a spec is *reported*, and the author decides whether it is
+   worth reopening. Applying it silently costs a round nobody asked for.
+
+That last point is why this is a report step and not the `git-pr-workflow`
+watch loop. There, the loop drives the review to settled because fixes are
+cheap. Here, the fix is a gate reopening — so the loop is: read, surface, stop.
+
 **Why two PRs.** The product PR is a durable, independently-reviewable record of
 *what* we're building and *why*, merged before a single line of engineering
 design is drafted — so a product-intent disagreement is caught and resolved on
@@ -645,37 +685,51 @@ rounds accumulate without either mechanism stopping them.
   step least served by inheriting whatever model the session happens to hold.
   The pin binds the invoking turn only, like every skill pin — see § *Model pins*.
 
-## Model pins
+## Which model runs this
 
-**Cadence pins no model, anywhere.** Not in its skills, not in its subagents. A
-shipped pin silently overrides the model a user chose for a role they are paying
-for, and a plugin's pin is not conveniently overridable from outside, so every
-role inherits the session model. `tests/check_agent_skills.py` fails on a pin, so
-this is enforced rather than intended.
+**Cadence pins no model, and cannot.** That is a limitation of the harness, not
+a preference, and it is worth understanding because the failure it produces is
+invisible.
 
-If you pin in your own layer — and there is a real argument for it, since spec
-judgment and code authorship are different jobs that otherwise share whatever the
-session happens to hold — **one asymmetry is worth knowing before you rely on
-it:**
+Three facts, each verified against the harness docs:
 
-| Where the pin lives | What it covers | Durable? |
-|---|---|---|
-| a subagent definition | that subagent's whole run | **yes** |
-| a skill or slash-command definition | the invoking turn only | **no** |
+1. A skill's `model:` pin **applies only to the turn that invoked the skill.**
+   Your session model resumes on your next prompt.
+2. A **subagent's** pin does hold for that subagent's whole run.
+3. **Nothing else persists.** No hook can change a model. There is no per-role
+   override — the `modelOverrides` setting maps provider model IDs, it does not
+   assign models to agents.
 
-That asymmetry is the thing that bites. Every review round here is a subagent, so
-a subagent pin genuinely holds for all of it. **The orchestration between rounds
-is not.** The pipeline stops for author decisions, and each answer starts a *new*
-turn that has fallen back to the session model. No hook can switch models
-mid-session, so **treat an explicit re-pin as owed after every pause** — check the
-active model on resuming a run rather than assuming the frontmatter held.
+Now put that against this workflow: it **stops to ask the author** every round.
+So a pin on the pipeline skill covers the first turn and nothing after. The
+review rounds are subagents and genuinely hold their model; the orchestration
+between them silently falls back. A pipeline pinned this way reads as running on
+one model throughout and does not.
 
-And do not read a context-window suffix on an alias as a request for a bigger
-window. Whether a suffixed alias resolves to a different model, or to the same one
-with the same window, is a harness question with a harness answer: measure it
-before depending on it. An unrecognised pin **fails open** — the harness falls
-back to the session model and says nothing, so a typo reads as honoured and is
-not.
+That is the whole reason the pin was removed rather than translated.
+
+### What replaces it
+
+`[models].recommended` in `cadence.toml`, and a check at the top of the
+pipeline. The check reads the recommendation, compares it to the model actually
+running, and **stops if they differ** — naming both and how to switch.
+
+It enforces nothing about the model. What it enforces is that you find out. The
+defect being fixed is not "the wrong model ran", it is "the wrong model ran and
+nothing said so".
+
+### Making it actually stick
+
+Two ways, both the harness's own:
+
+- **`/model <name>`** before you start the pipeline. Lasts the session.
+- **`"model"` in `.claude/settings.json`** — durable, and shared with your team
+  if committed. `.claude/settings.local.json` for yourself only.
+
+One thing to rule out if a model choice appears to be ignored: an
+`availableModels` allowlist. A value excluded by it **is not used and the
+session keeps its current model**, silently. That looks identical to a pin that
+did not hold.
 
 ## Acknowledgment
 

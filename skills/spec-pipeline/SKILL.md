@@ -4,6 +4,10 @@ description: Orchestrates the full spec review pipeline to READY, consulting the
 argument-hint: <specs>/<slug>/
 ---
 
+**Before anything else, check the model.** Run `python3 ${CLAUDE_PLUGIN_ROOT}/tools/cadence_config.py --json` and read `models_recommended`. If it is set and you are not running on it, **say so and stop** — name the model you are on, the one recommended, and how to switch (`/model <name>`, or `"model"` in `.claude/settings.json` to make it stick). Continue only if the author says to.
+
+This is a real gate, not a formality. Cadence cannot switch models: a skill's `model:` pin covers only the turn that invoked it, and this workflow spans many turns because it stops to ask you things. So without this check the pipeline silently runs the first round on one model and everything after on another, and nothing reports it.
+
 # /cadence:spec-pipeline
 
 <!-- agent-skill-duplication: acknowledged reason="An orchestration adapter. It
@@ -93,3 +97,5 @@ registered subagent names.
 The `model:` above binds this turn only, and the pipeline spans many. On resuming a
 run, check the active model before continuing: `spec-pipeline.md` § *Model pins* has
 which pins are durable and which are not.
+
+After opening either gate PR, read the review state with `python3 ${CLAUDE_PLUGIN_ROOT}/tools/review_state.py --pr <n>` and **surface every finding to the author in the handoff** — inline comments and the review body are separate surfaces. Do not apply them: an artifact edit on a gate PR reopens the gate. With `[review].provider = "none"`, say no reviewer is configured rather than reporting silence.

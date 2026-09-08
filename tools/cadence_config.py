@@ -38,7 +38,7 @@ CONFIG_NAME = "cadence.toml"
 
 TRACKER_PROVIDERS = ("linear", "github", "none")
 ASK_PROVIDERS = ("harness", "slack", "stdout")
-REVIEW_PROVIDERS = ("coderabbit", "codex", "subagent", "none")
+REVIEW_PROVIDERS = ("coderabbit", "codex", "claude", "subagent", "none")
 
 
 class ConfigError(Exception):
@@ -82,7 +82,16 @@ class Config:
     principles_path: str = "docs/architectural-principles.md"
     review_standards_path: str = "docs/code-review-standards.md"
 
-    models: dict = field(default_factory=lambda: {"default": "sonnet"})
+    # ADVISORY ONLY, and the docstring below says why. Cadence cannot force a
+    # model. A skill's `model:` pin lasts only the turn that invoked it, and a
+    # workflow that stops to ask the author spans many turns -- so from the
+    # second prompt onward the session model applies again, silently. There is
+    # no hook that can change a model and no per-agent override.
+    #
+    # So this is what a workflow CHECKS against. It refuses to run on a
+    # different model without saying so, which turns a silent degrade into a
+    # visible choice. Setting it does not switch anything.
+    models_recommended: str | None = None
 
     synthesis_threshold: int = 15
 
@@ -223,13 +232,22 @@ def load(start: Path | None = None) -> Config:
         retros_dir=paths.get("retros", Config.retros_dir),
         principles_path=paths.get("principles", Config.principles_path),
         review_standards_path=paths.get("review_standards", Config.review_standards_path),
-        models=raw.get("models", {"default": "sonnet"}),
+        models_recommended=raw.get("models", {}).get("recommended"),
         synthesis_threshold=int(retro.get("synthesis_threshold", Config.synthesis_threshold)),
         max_leaves=int(fanout.get("max_leaves", Config.max_leaves)),
         max_depth=int(fanout.get("max_depth", Config.max_depth)),
         max_options=int(fanout.get("max_options", Config.max_options)),
         must_stop=tuple(entries),
     )
+
+    unknown_model_keys = set(raw.get("models", {})) - {"recommended"}
+    if unknown_model_keys:
+        raise ConfigError(
+            f"{path}: [models] only reads `recommended`; found "
+            f"{', '.join(sorted(unknown_model_keys))}. Cadence cannot set a model "
+            f"per role — a skill's pin lasts one turn — so a key here that looks "
+            f"like it assigns one would be doing nothing."
+        )
 
     if cfg.review_provider == "coderabbit" and not cfg.review_bot_login:
         cfg.review_bot_login = "coderabbitai[bot]"
@@ -311,12 +329,17 @@ def selftest() -> int:
         check("coderabbit implies a default bot login", loaded.review_bot_login == "coderabbitai[bot]")
         check("must_stop entries load", len(loaded.must_stop) == 1)
 
+        (root / CONFIG_NAME).write_text('[models]\nrecommended = "opus"\n')
+        check("recommended model loads", load(root).models_recommended == "opus")
+        check("no [models] means no recommendation", Config(root=root).models_recommended is None)
+
         for bad, label in (
             ('[ask]\nprovider = "carrier-pigeon"\n', "unknown ask provider"),
             ('[nope]\nx = 1\n', "unknown section"),
             ('[[must_stop]]\npath = "db/"\n', "must_stop without a reason"),
             ('[[must_stop]]\nreason = "x"\n', "must_stop without a path"),
             ('[retro]\nsynthesis_threshold = 0\n', "zero synthesis threshold"),
+            ('[models]\ndefault = "sonnet"\n', "a [models] key that cannot do anything"),
         ):
             (root / CONFIG_NAME).write_text(bad)
             try:
@@ -372,6 +395,8 @@ def main() -> int:
     print(f"root:   {cfg.root}\nconfig: {where}\n")
     print(f"lint:     {cfg.lint}\ntest:     {cfg.test}")
     print(f"tracker:  {cfg.tracker_provider}\nask:      {cfg.ask_provider}\nreview:   {cfg.review_provider}")
+    if cfg.models_recommended:
+        print(f"model:    {cfg.models_recommended} (recommended; advisory, not enforced)")
     print(f"specs:    {cfg.specs_dir}\nretros:   {cfg.retros_dir}\n")
     print(cfg.describe_boundary())
     return 0

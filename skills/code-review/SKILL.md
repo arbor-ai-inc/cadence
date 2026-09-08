@@ -6,6 +6,8 @@ description: >
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Task
 ---
 
+Reviewer is `[review].provider`: `codex` (`codex exec`), `claude` (`claude -p`), `subagent` (Claude Code only — needs Task), `coderabbit`, or `none`. **Pick a different agent from the one that wrote the code**; that is the whole point.
+
 Follow the canonical procedure in `${CLAUDE_PLUGIN_ROOT}/reference/code-review.md` exactly.
 
 Reviewer: `codex exec` on the diff; fallback to the `code-reviewer` subagent, never same context.

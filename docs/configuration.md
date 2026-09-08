@@ -71,7 +71,7 @@ a run**, which is why `fanout.py init` warns when the hook is missing.
 |---|---|---|---|
 | `[tracker]` | `linear`, `github`, `none` | `none` | `linear` needs a Linear MCP server; `github` uses your `gh` auth |
 | `[ask]` | `harness`, `slack`, `stdout` | `harness` | only `slack` |
-| `[review]` | `coderabbit`, `codex`, `subagent`, `none` | `none` | no |
+| `[review]` | `coderabbit`, `codex`, `claude`, `subagent`, `none` | `none` | no |
 
 ### `[ask]` — how a workflow asks a human
 
@@ -98,6 +98,27 @@ unanswered, never as an answer.
 unattended runs.
 
 ### `[review]` — the automated reviewer
+
+**The one rule: the reviewer must not be the agent that wrote the code.** All
+five options exist to satisfy that.
+
+| Value | What runs | Available when driving with |
+|---|---|---|
+| `codex` | `codex exec` on the branch diff | anything with the Codex CLI |
+| `claude` | `claude -p` on the branch diff | anything with the Claude CLI |
+| `subagent` | a bundled reviewer subagent, fresh context | **Claude Code only** (needs Task) |
+| `coderabbit` | a PR-time bot | anything |
+| `none` | nothing | — |
+
+Driving with Claude Code, prefer `codex`. **Driving with Codex, use `claude`** —
+Codex has no Task tool so it cannot invoke a Claude subagent, but it can shell
+out to the Claude CLI. `subagent` is the fallback when only one agent is
+available: still fresh context, but the same model, so it is the weakest at
+finding what that model missed the first time.
+
+`bot_login` is only read by `coderabbit`, and it is threaded through every
+function that reads it — so setting it genuinely changes which account's reviews
+count, rather than being overridden by a default deeper in the call stack.
 
 With `provider = "none"` the whole post-PR watch loop is skipped, and workflows
 say so explicitly rather than reporting an unrun review as settled.
@@ -130,12 +151,46 @@ principles you mean beat twenty-six you inherited.
 
 ## Models
 
-Cadence pins no model anywhere, and `tests/check_agent_skills.py` fails on a pin.
-A shipped pin silently overrides the model you chose for a role you are paying
-for. `[models]` exists for your own layer to read; nothing in the plugin
-enforces it.
+**Cadence pins no model and cannot set one.** This is a harness limitation, and
+worth understanding because the failure it produces is silent.
 
-If you do pin, know the asymmetry: **a subagent pin holds for that subagent's
-whole run; a skill or command pin binds only the invoking turn.** The pipeline
-stops for author decisions, and each answer starts a turn that has fallen back to
-the session model — so treat an explicit re-pin as owed after every pause.
+Three facts:
+
+1. A skill's `model:` pin **applies only to the turn that invoked the skill.**
+   Your session model resumes on your next prompt.
+2. A **subagent's** pin holds for that subagent's whole run.
+3. Nothing else persists. No hook can change a model, and `modelOverrides` maps
+   provider model IDs rather than assigning models to roles.
+
+The spec pipeline stops to ask you questions, so it spans many turns. A pin on
+it would cover the first round and nothing after — reading as though it applied
+throughout. That is why cadence ships none, and why
+`tests/check_agent_skills.py` fails on one.
+
+### What `[models].recommended` does
+
+```toml
+[models]
+recommended = "opus"
+```
+
+A workflow reads it, compares it to the model it is actually running on, and
+**stops if they differ** — naming both, and how to switch. It enforces nothing
+about which model runs. What it enforces is that you **find out**.
+
+The defect this fixes is not "the wrong model ran". It is "the wrong model ran
+and nothing said so".
+
+Leave it unset if you do not care which model runs a workflow.
+
+### Setting a model for real
+
+Two ways, both the harness's own and both durable:
+
+- **`/model <name>`** before starting. Lasts the session.
+- **`"model"` in `.claude/settings.json`** — durable, and shared with the team if
+  committed. Use `.claude/settings.local.json` for yourself only.
+
+If a model choice appears to be ignored, check for an `availableModels`
+allowlist. A value it excludes **is not used and the session keeps its current
+model**, silently — which looks exactly like a pin that did not hold.

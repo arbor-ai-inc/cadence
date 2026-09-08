@@ -35,10 +35,19 @@ import re
 import subprocess
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
-# The reviewer's login, from [review].bot_login. Kept as a module default so
-# the self-test and a direct call still work without a config; every real code
-# path takes it from the config, because the login is per-project.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cadence_config  # noqa: E402
+
+# The reviewer's login. This module DEFAULT exists only so the self-test and a
+# direct function call work without a config; `main()` overrides it from
+# [review].bot_login, because which bot reviews a PR is per-project.
+#
+# Every function below takes the login as an argument with this as its default,
+# so nothing reads the global at call time. That matters: a module constant read
+# deep in a call stack is exactly how a configured value ends up ignored while
+# looking configured.
 BOT = "coderabbitai[bot]"
 VERDICTS = ("APPROVED", "CHANGES_REQUESTED")
 
@@ -66,12 +75,12 @@ _TRIGGERED = re.compile(r"review triggered|action performed", re.I)
 _APPROVE_CMD = re.compile(r"comments resolved and changes approved|changes approved", re.I)
 
 
-def _command_approval_times(comments: list[dict]) -> list[str]:
+def _command_approval_times(comments: list[dict], bot: str = BOT) -> list[str]:
     """Timestamps of the bot's approve/resolve acknowledgements."""
     return [
         c.get("created_at") or ""
         for c in comments
-        if (c.get("user") or {}).get("login") == BOT and _APPROVE_CMD.search(c.get("body") or "")
+        if (c.get("user") or {}).get("login") == bot and _APPROVE_CMD.search(c.get("body") or "")
     ]
 
 
@@ -138,11 +147,11 @@ def standing_human_objection(reviews: list[dict], bot: str = BOT) -> dict | None
     return max(objections, key=_order) if objections else None
 
 
-def read_bot_notice(comments: list[dict]) -> dict:
+def read_bot_notice(comments: list[dict], bot: str = BOT) -> dict:
     """The bot's newest notice, read from its CURRENT body (signals 3 and 4).
     `edited` reports a rewrite since posting, which is what makes "Review
     triggered" unusable as evidence on its own."""
-    mine = [c for c in comments if (c.get("user") or {}).get("login") == BOT]
+    mine = [c for c in comments if (c.get("user") or {}).get("login") == bot]
     if not mine:
         return {"present": False, "rate_limited": False, "edited": False, "stated_refill_minutes": None}
     newest = max(mine, key=lambda c: (c.get("updated_at") or c.get("created_at") or "", c.get("id") or 0))
@@ -167,13 +176,14 @@ def evaluate(
     comments: list[dict],
     row_description: str | None = None,
     row_state: str | None = None,
+    bot: str = BOT,
 ) -> dict:
     """Pure state reduction. Every fetcher below feeds this; the self-test drives it directly."""
-    verdict = latest_verdict(reviews)
+    verdict = latest_verdict(reviews, bot)
     at_head = bool(verdict and verdict.get("commit_id") == head)
     desc = (row_description or "").lower()
-    notice = read_bot_notice(comments)
-    human = standing_human_objection(reviews)
+    notice = read_bot_notice(comments, bot)
+    human = standing_human_objection(reviews, bot)
     # `pending` is trusted because it makes ONE claim -- a review is coming. A
     # FINISHED row's state is not (signal 1). Do NOT also
     # require the description to be absent -- "Review queued" is a real pending row.
@@ -189,9 +199,9 @@ def evaluate(
     approved_at_head = [
         r
         for r in reviews
-        if r.get("commit_id") == head and r.get("state") == "APPROVED" and (r.get("user") or {}).get("login") == BOT
+        if r.get("commit_id") == head and r.get("state") == "APPROVED" and (r.get("user") or {}).get("login") == bot
     ]
-    cmd_times = _command_approval_times(comments)
+    cmd_times = _command_approval_times(comments, bot)
     genuine_approvals = [r for r in approved_at_head if not _paired_with_command(r, cmd_times)]
     command_approval = bool(approved_at_head) and not genuine_approvals
     if command_approval and verdict and verdict.get("state") == "APPROVED":
@@ -362,7 +372,7 @@ def _gh_json(args: list[str]) -> object:
         raise StateError(f"unparseable output from `gh {' '.join(args)}`: {exc}") from exc
 
 
-def fetch(pr: int, repo: str | None = None) -> dict:
+def fetch(pr: int, repo: str | None = None, bot: str = BOT) -> dict:
     prefix = f"repos/{repo}" if repo else "repos/:owner/:repo"
     # Deliberately NOT `--jq .headRefOid`: that prints a BARE SHA, which is not
     # JSON, so the parse raises and the whole report dies on the one field it
@@ -385,7 +395,7 @@ def fetch(pr: int, repo: str | None = None) -> dict:
     desc, state = coderabbit_row(statuses if isinstance(statuses, list) else [])
     if not isinstance(reviews, list) or not isinstance(comments, list):
         raise StateError(f"expected JSON arrays for #{pr}")
-    return evaluate(head_sha, reviews, comments, desc, state)
+    return evaluate(head_sha, reviews, comments, desc, state, bot=bot)
 
 
 def selfcheck() -> list[str]:
@@ -776,6 +786,23 @@ def main() -> int:
     ap.add_argument("--json", action="store_true", dest="as_json", help="machine-readable output for a monitor")
     args = ap.parse_args()
 
+    try:
+        cfg = cadence_config.load()
+    except cadence_config.ConfigError as exc:
+        print(f"review_state: {exc}", file=sys.stderr)
+        return 1
+
+    # `none` means the project configured no automated reviewer. Report that
+    # plainly rather than fetching and finding nothing, which reads the same as
+    # a reviewer that has not run yet.
+    if cfg.review_provider == "none" and args.pr is not None:
+        print("review_state: [review].provider is \"none\" — no automated reviewer is "
+              "configured for this project, so there is no review state to read. "
+              "This is not the same as a review that has not landed yet.")
+        return 0
+
+    bot = cfg.review_bot_login or BOT
+
     bad = selfcheck()
     if bad:
         print("review_state self-test FAILED:", file=sys.stderr)
@@ -786,7 +813,7 @@ def main() -> int:
         print("review_state: OK (self-test passed)")
         return 0
 
-    state = fetch(args.pr, args.repo)
+    state = fetch(args.pr, args.repo, bot=bot)
     print(json.dumps(state, indent=2) if args.as_json else render(state))
     # Exit 0 whatever the state: this REPORTS, it does not gate. A non-zero exit
     # for "not landed yet" would make every polling loop treat a normal wait as

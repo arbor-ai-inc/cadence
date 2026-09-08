@@ -117,13 +117,61 @@ is missing.
 |---|---|---|
 | An issue tracker | `[tracker].provider` | `linear`, `github`, or `none` (body passed inline) |
 | Unattended runs | `[ask].provider = "slack"` | needs a bot token; otherwise questions come to your session |
-| An automated PR reviewer | `[review].provider` | `coderabbit`, `codex`, `subagent`, or `none` |
+| A code reviewer | `[review].provider` | see [below](#which-reviewer) |
+| A model check | `[models].recommended` | see [below](#which-model) |
 | The spec pipeline | `[paths].principles` | Gate 2 grades against this file and nothing else — write it first, from [the starter](templates/architectural-principles.starter.md) |
 | Approval policy | `[paths].review_standards` | who signs off, what blocks a merge — from [the template](templates/code-review-standards.template.md) |
 
 Full reference: [`docs/configuration.md`](docs/configuration.md). Adoption order
 and what to expect: [`docs/getting-started.md`](docs/getting-started.md).
 Different stack: [`docs/porting.md`](docs/porting.md).
+
+### Which reviewer
+
+**The one rule: the reviewer must not be the agent that wrote the code.**
+
+| `[review].provider` | What runs | Available when driving with |
+|---|---|---|
+| `codex` | `codex exec` on the diff | anything with the Codex CLI |
+| `claude` | `claude -p` on the diff | anything with the Claude CLI |
+| `subagent` | a bundled reviewer subagent, fresh context | **Claude Code only** (needs the Task tool) |
+| `coderabbit` | a PR-time bot | anything |
+| `none` | nothing | — |
+
+Pick whichever is a *different* agent from the one implementing. Driving with
+Claude Code, use `codex`. **Driving with Codex, use `claude`** — Codex cannot
+invoke a Claude subagent, but it can shell out to the Claude CLI, which gets you
+the same cross-agent review from the other direction.
+
+One exception worth knowing: the **spec pipeline** reviewers are subagents with
+`Read, Grep, Glob, Write` and no `Edit`, and that restriction is what stops a
+reviewer editing the spec it is reviewing. Under an agent with no subagents the
+roles collapse into one context and the guarantee is gone. Run the spec pipeline
+from Claude Code, or treat the separation as convention only.
+
+### Which model
+
+**Cadence cannot set your model, and does not pretend to.** A skill's model pin
+covers only the turn that invoked it, and a workflow that stops to ask you
+questions spans many turns — so a pin covers the first round and nothing after.
+No hook can change a model.
+
+What `[models].recommended` does: a workflow **checks** the model it is running
+on against it, and stops if they differ instead of quietly continuing. That is
+the whole mechanism, and it is worth having, because the failure it catches is
+otherwise invisible — you only notice by chance that half the run was on a
+different model.
+
+To actually set a model, use the harness's own setting, which is durable:
+
+```json
+// .claude/settings.json
+{ "model": "opus" }
+```
+
+Or `/model <name>` for one session. If a model choice seems ignored, check for
+an `availableModels` allowlist — a value it excludes is silently not used and
+the session keeps its current model.
 
 ## What is in it
 

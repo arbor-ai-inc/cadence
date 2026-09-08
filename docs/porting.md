@@ -36,6 +36,30 @@ integration surface is small and stated in
 
 `provider = "none"` works today and loses only the state transitions.
 
+## Driving with Codex instead of Claude Code
+
+The workflows are prose and port fine. Two things do not.
+
+**Subagents.** Codex has no Task tool, so any step that invokes one is
+unavailable. That affects:
+
+- `[review].provider = "subagent"` — use `claude` instead, which shells out to
+  the Claude CLI and gets you a genuinely different reviewer.
+- **The spec pipeline.** Its reviewers are subagents restricted to
+  `Read, Grep, Glob, Write` with no `Edit`, and that restriction is what stops a
+  reviewer editing the spec it is reviewing. Without subagents the roles collapse
+  into one context and the guarantee is gone. There is no substitute: run the
+  spec pipeline from Claude Code, or treat the role separation as convention and
+  say so out loud.
+
+**`AskUserQuestion`.** `[ask].provider = "harness"` assumes a structured picker.
+Under Codex use `stdout` or `slack`; the required content of a decision brief is
+identical either way, only the rendering changes.
+
+The generated adapters in `adapters/codex/` point at `.cadence/`, so vendor the
+plugin's `reference/`, `tools/` and `templates/` there rather than relying on a
+plugin root that only Claude Code resolves.
+
 ## A different automated reviewer
 
 Add `reference/providers/<name>.md` following

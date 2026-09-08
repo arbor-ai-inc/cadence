@@ -183,6 +183,10 @@ CODERABBIT_SCOPE_EXEMPT = ("reference/providers/",)
 # the provider's name and is not a hardcoding. Only this exact form is allowed,
 # so a bare command or a prose mention still fires.
 CODERABBIT_LINK_OK = "providers/coderabbit.md"
+# A neutral doc must be able to name the ENUM VALUE, or it cannot document what
+# `[review].provider` accepts. The backticked form is that value; a bare
+# `@coderabbitai` command or a prose "CodeRabbit" still fires.
+CODERABBIT_VALUE_OK = "`coderabbit`"
 
 # The marketplace coordinate is how anyone installs this, so it has to appear in
 # the install instructions. It is the one place the org name is a URL rather than
@@ -266,7 +270,8 @@ def scan(path: Path) -> list[tuple[int, str, str, str]]:
                 # A pointer to the provider notes is the intended pattern. Only
                 # exempt the line when every occurrence on it is part of that
                 # path, so a link sitting beside a bare command still fires.
-                if line.count(CODERABBIT_LINK_OK) >= line.lower().count("coderabbit"):
+                allowed = line.count(CODERABBIT_LINK_OK) + line.count(CODERABBIT_VALUE_OK)
+                if allowed >= line.lower().count("coderabbit"):
                     continue
             hits.append((lineno, rule.name, m.group(0).strip(), rule.why))
     return sorted(hits)
@@ -350,8 +355,16 @@ def selftest() -> int:
     ):
         failures.append("a bare link to the provider notes should be exempt")
     both = "run `@coderabbitai full review`, see [x](./providers/coderabbit.md)"
-    if both.count(CODERABBIT_LINK_OK) >= both.lower().count("coderabbit"):
+    if both.count(CODERABBIT_LINK_OK) + both.count(CODERABBIT_VALUE_OK) >= both.lower().count("coderabbit"):
         failures.append("a line carrying a bare command must NOT be exempted by a link beside it")
+
+    # The enum value is exempt; a prose mention or a command beside it is not.
+    value_only = "| `coderabbit` | a PR-time bot | anything |"
+    if not (value_only.count(CODERABBIT_VALUE_OK) >= value_only.lower().count("coderabbit")):
+        failures.append("the backticked enum value should be exempt")
+    value_plus = "set `coderabbit`, then post @coderabbitai review"
+    if value_plus.count(CODERABBIT_VALUE_OK) + value_plus.count(CODERABBIT_LINK_OK) >= value_plus.lower().count("coderabbit"):
+        failures.append("a command beside the enum value must NOT be exempted")
 
     # An issue id gets no exemption anywhere, including the attributed files.
     if not any(r.name == "private-issue-id" for r in rules_for("README.md")):
