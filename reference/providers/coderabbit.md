@@ -63,7 +63,7 @@ been confidently wrong.
   would reverse and why the concern is still addressed — a reviewer that runs its own
   verification will often confirm and withdraw the finding.
 - **Reply where the bot is listening, or the disagreement is not stated at all.** A
-  standalone top-level comment is not a reply. On T-17 (#NNN) four declines posted that
+  standalone top-level comment is not a reply. On T-17 (PR S) four declines posted that
   way sat unprocessed while the review stayed `CHANGES_REQUESTED` — and were reported to
   the author as "answered", which was wrong. Reply **inside the review thread** and
   `@`-mention the bot. Thread replies cannot clear the review, though: CodeRabbit answered
@@ -80,13 +80,13 @@ been confidently wrong.
   answer, which is a true statement you can defend. Approving asks the bot to bless a diff
   whose findings you partly declined — a green check you did not earn, and the human
   reviewer is the real gate either way. Note the bot's own approval is weak evidence: on
-  #NNN it filed an `APPROVED` review in the same comment that said *"This does not approve
+  PR S it filed an `APPROVED` review in the same comment that said *"This does not approve
   the PR."*
 - **A passing status does not mean it said nothing.** Read the inline comments even on an
   approving review.
 - **A passing status can also mean it never looked.** `.coderabbit.yaml` carries
   `ignore_title_keywords`, and on T-23 one of them — `draft` — was also a
-  `templates_table.status` value, so a PR titled `… deprecated → draft` was skipped
+  status value in the product's data, so a PR titled `… deprecated → draft` was skipped
   outright. `gh pr checks` rendered that as a **passing** `CodeRabbit` row,
   indistinguishable from a clean review; only the row's description said *"Review
   skipped: ignored keyword in the PR title"*. Retitling and commenting
@@ -103,7 +103,7 @@ been confidently wrong.
   and reading it wrong is `automation-silently-paused`, n=9 in one batch. It is now:
 
   ```bash
-  python3 .github/scripts/pr_review_state.py --pr "${PR:?}"
+  python3 tools/review_state.py --pr "${PR:?}"
   ```
 
   Every detail that made the old pipeline load-bearing — selecting on `state` rather
@@ -121,13 +121,13 @@ been confidently wrong.
   **`auto_pause_after_reviewed_commits` is the cause to expect on a branch under active
   development.** After several commits CodeRabbit pauses itself and says so only in a
   comment; the row still reads `pass · "Review completed"`. It fired three times on
-  #NNN, once leaving the *forward-merge commit* — the largest change on the branch —
+  PR M, once leaving the *forward-merge commit* — the largest change on the branch —
   unreviewed while the dashboard was fully green. **`@coderabbitai full review` resumes it** —
   the plain `review` is a no-op past the pause and still spends an attempt; see
   [`../code-review.md`](../code-review.md#automated-ai-review-coderabbit).
 
 - **Unresolved-thread count is not finding count.** A finding whose line falls outside
-  the diff cannot be posted inline, so it arrives in the **review body** instead. #NNN's
+  the diff cannot be posted inline, so it arrives in the **review body** instead. PR M's
   merge commit reported `unresolved threads: 0` with a Major finding open — a real defect
   in the test harness, described in prose nothing counted. Read the review body even when
   the thread count is zero.
@@ -148,14 +148,14 @@ been confidently wrong.
          | .[] | "--- \(.state) \(.submitted_at)\n\(.body)"'
   ```
 
-  On #NNN that returns the `CHANGES_REQUESTED` body the newest-review check misses
+  On PR S that returns the `CHANGES_REQUESTED` body the newest-review check misses
   entirely. Filtering to the newest review here is the same mistake in a second place.
 
   **`(.body|length)>0` belongs here and nowhere near a stop condition.** Enumerating
   findings is exactly what it is for. But an `APPROVED` review has no body — 11 of 11
   approvals across eight PRs in this repo measured zero-length, against 2,000–7,000
   characters for every `CHANGES_REQUESTED` — so a loop that waits for "the newest review
-  with a body at head" is waiting for something a clean PR never produces. #NNN approved
+  with a body at head" is waiting for something a clean PR never produces. PR T approved
   at head and was asked six more times on that predicate. Terminal conditions select on
   `state`.
 
@@ -168,7 +168,7 @@ been confidently wrong.
   ```
 
   **`in_reply_to_id==null` is what makes this a finding count.** The bot replies to its
-  own threads, and those replies are inline comments too: #NNN has 8 bot comments and 4
+  own threads, and those replies are inline comments too: PR S has 8 bot comments and 4
   findings, the other 4 being *"Post `@coderabbitai resolve` …"*. Note this is a
   different endpoint from `/reviews` — a review body and an inline comment never appear
   in each other's response.
@@ -199,6 +199,6 @@ been confidently wrong.
   **The login is spelled differently in the two APIs**, and getting it wrong fails
   silently. GraphQL reports `coderabbitai`; REST reports `coderabbitai[bot]`. Filtering
   the GraphQL query on the REST spelling returns **0 threads** on a PR that has 4 — an
-  empty result that reads as "no findings" rather than as a bad filter. Verified on #NNN
+  empty result that reads as "no findings" rather than as a bad filter. Verified on PR S
   both ways.
 
