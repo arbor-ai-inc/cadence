@@ -97,6 +97,7 @@ def main() -> int:
             ("tools-and-services.template.md", "docs/tools-and-services.md"),
             ("_product_template.md", "specs/_product_template.md"),
             ("_design_template.md", "specs/_design_template.md"),
+            ("_testing_plan_template.md", "specs/_testing_plan_template.md"),
         ]
 
     created, kept, missing = [], [], []

@@ -80,6 +80,9 @@ jobs:
       - name: adapters stay thin and links resolve
         run: python3 tests/check_agent_skills.py
 
+      - name: spec pipeline guarantees (design hash, design-only test, template)
+        run: python3 tests/check_spec_pipeline.py
+
       - name: reference docs stay within their size budget
         run: |
           python3 tests/check_doc_budget.py --selftest

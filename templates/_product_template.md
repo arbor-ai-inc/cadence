@@ -26,7 +26,12 @@ A requirement must be **falsifiable**, which is not the same as detailed. "An al
 fires when a key's request count exceeds a configured threshold" is falsifiable and
 implementation-free. "An alert fires when volume departs from its recent norm" is
 neither. "An alert fires when volume exceeds the trailing 7-day median by 3×" is
-falsifiable but has picked the design's algorithm — write the first.
+falsifiable but has picked the design's algorithm — write the first. A requirement
+scoped to the system's own work cycle ("within one sync") has picked the design too;
+give the user-visible interval instead.
+
+**Magnitudes are not mechanism.** How many, how large, how often are facts about the
+world, and no later gate can supply them — see § *Expected scale*.
 
 ## Problem
 <Why does this exist? What is broken or missing today? One short paragraph.>
@@ -37,6 +42,12 @@ falsifiable but has picked the design's algorithm — write the first.
 ## What it is
 <One paragraph: the outcome this delivers, in plain terms.>
 
+## Expected scale
+> Orders of magnitude, not design: how many of the things this handles, how large
+> each is, how often they arrive. "Unknown, and here is what would tell us" is a
+> valid answer; silence is a finding.
+- <e.g. 5–10 feed sources; ~10k items each; ~2 KB per item; refreshed hourly.>
+
 ## Requirements (user-verifiable)
 > Each requirement is an OBSERVABLE outcome, not an implementation instruction.
 > Number them R1, R2, … so the design and its acceptance criteria can reference
@@ -45,7 +56,8 @@ falsifiable but has picked the design's algorithm — write the first.
 - **R2** <e.g. A duplicate event is counted exactly once.>
 
 ## Success metrics
-<How we know this worked — concrete and attributable to this work.>
+<How we know this worked — concrete, attributable to this work, measurable at the
+scale that will exist at ship, and each naming who reads it.>
 
 ## Non-goals
 > What this pass explicitly does NOT do.
