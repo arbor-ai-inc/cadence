@@ -15,10 +15,10 @@ decide the branch, not how hard the question feels
 (`${CLAUDE_PLUGIN_ROOT}/reference/execute-issue.md` § *Decisions*):
 
 - One defensible answer, or wrong is cheap to undo → decide it and keep going.
-- A one-way door whose effects stay inside this diff → **fan out**, per
-  `${CLAUDE_PLUGIN_ROOT}/reference/decision-fanout.md`. Build each option in its own
-  worktree and run review in every leaf. This is not a question, and asking instead
-  is the failure this branch exists to prevent.
+- A one-way door whose effects stay inside this diff → with `[fanout].enabled = true`,
+  **fan out**, per `${CLAUDE_PLUGIN_ROOT}/reference/decision-fanout.md`: build each
+  option in its own worktree and run review in every leaf. With fan-out off (the
+  default), ask, as below.
 - `must-stop`, or a `fork` refused for a cap → a Shape A decision brief
   (`${CLAUDE_PLUGIN_ROOT}/reference/human-brief.md`) sent with
   `python3 ${CLAUDE_PLUGIN_ROOT}/tools/ask.py ask` and issue context; mirror Q+A onto the issue.

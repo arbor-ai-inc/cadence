@@ -99,6 +99,9 @@ class Config:
 
     synthesis_threshold: int = 15
 
+    # Off unless a project opts in. With it off, a one-way decision is asked
+    # rather than built N ways, and fanout.py refuses init and fork (exit 3).
+    fanout_enabled: bool = False
     max_leaves: int = 8
     max_depth: int = 3
     max_options: int = 3
@@ -239,6 +242,7 @@ def load(start: Path | None = None) -> Config:
         overlays_dir=paths.get("overlays"),
         models_recommended=raw.get("models", {}).get("recommended"),
         synthesis_threshold=int(retro.get("synthesis_threshold", Config.synthesis_threshold)),
+        fanout_enabled=fanout.get("enabled", False),
         max_leaves=int(fanout.get("max_leaves", Config.max_leaves)),
         max_depth=int(fanout.get("max_depth", Config.max_depth)),
         max_options=int(fanout.get("max_options", Config.max_options)),
@@ -258,6 +262,10 @@ def load(start: Path | None = None) -> Config:
         cfg.review_bot_login = "coderabbitai[bot]"
     if cfg.synthesis_threshold < 1:
         raise ConfigError(f"{path}: [retro].synthesis_threshold must be at least 1")
+    if not isinstance(cfg.fanout_enabled, bool):
+        # A quoted "false" is truthy; reading it as on would turn fan-out on in a
+        # project that wrote the word to turn it off.
+        raise ConfigError(f"{path}: [fanout].enabled must be true or false, unquoted")
     for name, value in (("max_leaves", cfg.max_leaves), ("max_depth", cfg.max_depth), ("max_options", cfg.max_options)):
         if value < 1:
             raise ConfigError(f"{path}: [fanout].{name} must be at least 1")
@@ -347,6 +355,10 @@ def selftest() -> int:
         check("overlays dir loads", load(root).overlays_dir == "docs/overlays")
         check("no overlays by default", Config(root=root).overlays_dir is None)
 
+        check("fan-out is off by default", Config(root=root).fanout_enabled is False)
+        (root / CONFIG_NAME).write_text('[fanout]\nenabled = true\n')
+        check("fan-out can be turned on", load(root).fanout_enabled is True)
+
         for bad, label in (
             ('[ask]\nprovider = "carrier-pigeon"\n', "unknown ask provider"),
             ('[nope]\nx = 1\n', "unknown section"),
@@ -354,6 +366,7 @@ def selftest() -> int:
             ('[[must_stop]]\nreason = "x"\n', "must_stop without a path"),
             ('[retro]\nsynthesis_threshold = 0\n', "zero synthesis threshold"),
             ('[models]\ndefault = "sonnet"\n', "a [models] key that cannot do anything"),
+            ('[fanout]\nenabled = "false"\n', "a quoted fan-out switch"),
         ):
             (root / CONFIG_NAME).write_text(bad)
             try:
@@ -422,6 +435,7 @@ def main() -> int:
     print(f"root:   {cfg.root}\nconfig: {where}\n")
     print(f"lint:     {cfg.lint}\ntest:     {cfg.test}")
     print(f"tracker:  {cfg.tracker_provider}\nask:      {cfg.ask_provider}\nreview:   {cfg.review_provider}")
+    print(f"fan-out:  {'on' if cfg.fanout_enabled else 'off (one-way decisions are asked)'}")
     if cfg.models_recommended:
         print(f"model:    {cfg.models_recommended} (recommended; advisory, not enforced)")
     print(f"specs:    {cfg.specs_dir}\nretros:   {cfg.retros_dir}")
