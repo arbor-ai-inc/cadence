@@ -3,6 +3,14 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.8.0
+
+- **Fan-out is now opt-in: `[fanout].enabled`, default `false`.** With it off, a
+  one-way decision inside the diff is asked with a decision brief, and `fanout.py`
+  refuses `init` and `fork` (exit 3, naming the switch). **Behavior change:** a project
+  that relied on fan-out sets `enabled = true` under `[fanout]` to keep it.
+  `check-scope` is unaffected.
+
 ## 0.7.0
 
 New rules from the source project's recent retros, in the short style, within budget.

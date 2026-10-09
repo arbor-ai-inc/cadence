@@ -173,6 +173,19 @@ Overlays are read through generated wrappers, so they apply to the
 [submodule install](setup.md#or-vendor-it-as-a-git-submodule-with-no-plugin).
 Regenerate the wrappers after setting or changing this key.
 
+### `[fanout].enabled` — build options instead of asking
+
+```toml
+[fanout]
+enabled = true
+```
+
+**Off by default.** With it off, an autonomous run that reaches a one-way decision
+inside its own diff stops and asks with a decision brief, and `fanout.py` refuses to
+build a tree. With it on, the run builds each defensible option in its own git worktree
+and keeps going; you choose between finished options later. `[[must_stop]]` is asked
+either way. Turn it on once you trust the boundary and want unattended runs not to wait.
+
 ## Models
 
 **Cadence pins no model and cannot set one.** This is a harness limitation, and
