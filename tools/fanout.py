@@ -664,8 +664,8 @@ def cmd_fork(args):
         for slug, what, why in options:
             trail = "-".join([*(c["option"] for c in parent["choices"]), slug])
             # `fan/<issue>/<trail>` and NOT `<issue>/fan/<trail>`: git refs are a
-            # path hierarchy, so `refs/heads/alt-341` (the trunk branch, which the
-            # repo convention already owns) makes `refs/heads/alt-341/fan/...`
+            # path hierarchy, so `refs/heads/xx-341` (the trunk branch, which the
+            # repo convention already owns) makes `refs/heads/xx-341/fan/...`
             # unlockable. Putting `fan/` first keeps the whole tree in its own
             # namespace, groups every leaf under `git branch --list 'fan/*'`, and
             # can never collide with the branch the issue itself is on.
@@ -1122,7 +1122,7 @@ def cmd_check_scope(args):
 
     # `--no-renames` is load-bearing, not a style choice. With rename detection
     # on, `git diff --cached --name-only` reports only the DESTINATION of a
-    # rename, so `git mv api/event-schema.yaml api/moved.yaml` shows
+    # rename, so `git mv api/schema.yaml api/moved.yaml` shows
     # one unprotected path and sails through — while being the most destructive
     # way to touch a contract. Disabling detection reports the delete and the add
     # separately, so the protected source path is visible.

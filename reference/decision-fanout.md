@@ -169,7 +169,7 @@ was considered and rejected. This routinely takes a 3x4x2 tree down to 2x2x2.
 1. Pin the base once, on the issue branch, before any decision:
 
    ```bash
-   python3 tools/agent-spec/fanout.py init XX-341
+   python3 tools/fanout.py init XX-341
    ```
 
    Every leaf descends from this commit, so overnight drift on `main` costs one
@@ -185,7 +185,7 @@ was considered and rejected. This routinely takes a 3x4x2 tree down to 2x2x2.
    case.
 
    ```bash
-   python3 tools/agent-spec/fanout.py record XX-341 --kind two-way \
+   python3 tools/fanout.py record XX-341 --kind two-way \
      --question "One file or a retry/ package?" --answer "one file for now" \
      --reversal "a rename plus one import line"
    ```
@@ -199,7 +199,7 @@ was considered and rejected. This routinely takes a 3x4x2 tree down to 2x2x2.
    the parent resolves from the working directory.
 
    ```bash
-   python3 tools/agent-spec/fanout.py fork XX-341 \
+   python3 tools/fanout.py fork XX-341 \
      --decision "Where does the retry counter live?" \
      --why-you "both work; the operational cost is the author's to carry" \
      --source "src/publish.go:212" \
@@ -246,7 +246,7 @@ was considered and rejected. This routinely takes a 3x4x2 tree down to 2x2x2.
 7. Close each leaf with the evidence gate, then record what it cost:
 
    ```bash
-   python3 tools/agent-spec/fanout.py result XX-341 --tests pass \
+   python3 tools/fanout.py result XX-341 --tests pass \
      --evidence "go test ./internal/... : ok, 214 tests" \
      --lost "no cross-pod view: a two-pod deploy undercounts by design" \
      --notice "the retry count resets when a pod restarts" \
@@ -280,7 +280,7 @@ was considered and rejected. This routinely takes a 3x4x2 tree down to 2x2x2.
    onto the author, which is the cost this workflow exists to remove.
 
    ```bash
-   python3 tools/agent-spec/fanout.py recommend XX-341 --decision d1 \
+   python3 tools/fanout.py recommend XX-341 --decision d1 \
      --option inprocess --reason "the counter is per-process by definition" \
      --wrong-if "something already reads a cross-pod aggregate of this counter" \
      --if-silent "nothing ships; the tree waits and main drifts under it"
@@ -293,8 +293,8 @@ was considered and rejected. This routinely takes a 3x4x2 tree down to 2x2x2.
 9. Render the ledger, then post the digest. Neither blocks:
 
    ```bash
-   python3 tools/agent-spec/fanout.py ledger XX-341
-   python3 tools/agent-spec/fanout.py notify XX-341
+   python3 tools/fanout.py ledger XX-341
+   python3 tools/fanout.py notify XX-341
    ```
 
    `notify` renders a chat-shaped digest — no tables, since chat transports do not
@@ -316,7 +316,7 @@ was considered and rejected. This routinely takes a 3x4x2 tree down to 2x2x2.
 Read the ledger, then run the one command it prints for the chosen path:
 
 ```bash
-python3 tools/agent-spec/fanout.py collapse XX-341 --choose d1=inprocess,d2=fixed
+python3 tools/fanout.py collapse XX-341 --choose d1=inprocess,d2=fixed
 ```
 
 That keeps one worktree and deletes every other branch. Exit 4 means the choices
@@ -354,8 +354,8 @@ The session that built the tree is gone by morning, so everything needed to
 resume is derivable from state rather than from a transcript:
 
 ```bash
-python3 tools/agent-spec/fanout.py status XX-341
-python3 tools/agent-spec/fanout.py status              # every tree on disk
+python3 tools/fanout.py status XX-341
+python3 tools/fanout.py status              # every tree on disk
 ```
 
 Without an issue argument it lists every tree, with state, size and last-touched
