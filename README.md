@@ -112,7 +112,8 @@ reference/     the canonical workflows — the substance
 skills/        thin Claude Code adapters that route to them
 agents/        subagent definitions (reviewers, editor)
 adapters/codex/  the same adapters for Codex, generated
-tools/         fanout, spec hashing, ask transport, review state
+tools/         fanout, spec hashing, ask transport, review state, wrappers
+cadence        the tool dispatcher; ./.cadence/cadence in your project
 templates/     cadence.toml, spec templates, the retro ledger, a principles
                rubric, a review-policy template, a tools inventory stub
 examples/      the measurements the rules cite
@@ -138,7 +139,7 @@ python3 tools/ask.py --selftest
 python3 tools/review_state.py             # self-test
 python3 scripts/gen_adapters.py --check
 python3 tests/check_agent_skills.py
-python3 tests/check_fanout.py             # 69 tests over real git worktrees
+python3 tests/check_fanout.py             # 74 tests over real git worktrees
 python3 tests/check_install.py            # an adopter's first hour, end to end
 python3 tests/check_user_docs.py          # no doc command an adopter cannot run
 python3 tests/check_version_bumped.py     # a shipped change bumps the version
@@ -162,6 +163,11 @@ steps, not one:
 New skills will not appear until the last step. If a skill you expect is
 missing, check `/plugin list` against the version you meant to install — a
 stale clone and a stale install look identical from the `/` menu.
+
+Vendoring cadence as a git submodule instead pins a release tag in your repo,
+gives you skill names without the `cadence:` prefix, and works under Codex. See
+[`docs/setup.md`](docs/setup.md#or-vendor-it-as-a-git-submodule-with-no-plugin).
+Every version that reaches `main` is tagged `v<version>`.
 
 ## Contributing
 

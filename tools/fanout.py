@@ -203,6 +203,56 @@ def repo_root(start=None):
     die("could not determine the main worktree from `git worktree list`")
 
 
+def populate_submodules(root, leaf):
+    """Give a new leaf the vendored cadence copy, if the project has one.
+
+    `git worktree add` checks out the superproject only, so a submodule starts
+    empty in every leaf. That matters for one submodule in particular: a project
+    that vendors cadence at .cadence/ has wrappers pointing at .cadence/reference/,
+    and in an empty leaf they point at nothing -- the leaf's review step would run
+    without its workflow, and say nothing about it.
+
+    Deliberately ONLY that submodule. Any other submodule a project has stays as
+    `git worktree add` leaves it, exactly as before this existed.
+
+    It is cloned from the main checkout's copy, never from its upstream URL, and
+    only when that copy already holds the commit the leaf pins; the URL override
+    is worktree-local, so the main checkout's own URL is untouched. When it
+    cannot be done offline, the leaf keeps an empty .cadence/ and this says so
+    rather than failing the fork.
+    """
+    if not (leaf / ".gitmodules").exists():
+        return
+    listing = git("config", "-z", "-f", ".gitmodules", "--get-regexp", r"^submodule\..*\.path$",
+                  cwd=leaf, check=False)
+    for entry in filter(None, listing.split("\0")):
+        key, _, rel = entry.partition("\n")
+        if rel.strip("/") != STATE_DIR:
+            continue
+        name = key[len("submodule."):-len(".path")]
+        source = root / rel
+        pinned = git("rev-parse", f"HEAD:{rel}", cwd=leaf, check=False)
+        has_commit = (source / ".git").exists() and pinned and subprocess.run(
+            ["git", "cat-file", "-e", f"{pinned}^{{commit}}"],
+            cwd=str(source), capture_output=True,
+        ).returncode == 0
+        if has_commit:
+            git("config", "--worktree", f"submodule.{name}.url", str(source), cwd=leaf)
+            proc = subprocess.run(
+                ["git", "-c", "protocol.file.allow=always", "submodule", "update", "--init", "--", rel],
+                cwd=str(leaf), capture_output=True, text=True,
+            )
+            if proc.returncode == 0:
+                return
+        print(
+            f"fanout: WARNING - {rel}/ is empty in {leaf.name}: the main checkout does not hold "
+            f"the commit this leaf pins. Run `git submodule update --init` in the main checkout, "
+            f"or in the leaf.",
+            file=sys.stderr,
+        )
+        return
+
+
 def shortstat(cwd, ref_from, ref_to="HEAD"):
     """Measure a diff with git rather than trusting a hand-typed number.
 
@@ -634,6 +684,7 @@ def cmd_fork(args):
                 # which survives both.
                 git("config", "extensions.worktreeConfig", "true", cwd=root)
                 git("config", "--worktree", MARKER_KEY, args.issue, cwd=worktree_abs)
+                populate_submodules(root, worktree_abs)
 
                 state["nodes"][node_id] = {
                     "id": node_id,
