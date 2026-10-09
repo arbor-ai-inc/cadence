@@ -174,6 +174,7 @@ Every version that reaches `main` is tagged `v<version>`.
 
 ## Contributing
 
+The process, from fork to merge, is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 Read [`reference/skill-anatomy.md`](reference/skill-anatomy.md) first. Three
 rules that catch most first attempts: **never pin `model:`** in anything
 shipped, **never edit a generated adapter** (edit its source and regenerate),
