@@ -25,7 +25,7 @@ Emit a brief at every point where the workflow stops and waits for a human:
 | `code-review` finding that needs a product decision | A |
 | `spec-pipeline` `decision: author` batch | A |
 | `spec-pipeline` DESIGN_READY changelog + decomposition | B |
-| `execute-issue` ambiguity question (Slack, or the in-session fallback) | A |
+| `execute-issue` ambiguity question (the ask transport, or in session) | A |
 | `retro` PR body — each proposed lesson | B |
 | Any PR body written under `git-pr-workflow` | B |
 

@@ -104,8 +104,8 @@ it is defined — `POST /crawl` is implemented in the Serving plane but exists
 because Platform jobs call it, and that is what makes it an edge.
 
 The edges that exist today are enumerated in
-[`your contract set: README.md`](../contracts/README.md#the-five-cross-boundary-boundary-contracts)
-and drawn in [the plane graph](../architecture/README.md#plane-dependency-graph).
+your contract index and drawn in your architecture
+overview.
 Adding one is an architectural decision, not a routing detail.
 
 ### Why this needs its own section
@@ -130,8 +130,8 @@ of the following, in the same PR:
 | # | Artifact | What changes |
 |---|---|---|
 | 1 | your architecture overview's boundary diagram | The labelled edge, **and** any count in the sentence beneath it |
-| 2 | `your contract set: README.md` — enumerated edge list | A row: direction, and what pins the shape (a schema file, or the doc holding it in prose) |
-| 3 | Both plane docs' *Boundary contracts* tables | The **producer** side and the **consumer** side. An edge listed on one side only is exactly the defect the audit found |
+| 2 | your contract index — enumerated edge list | A row: direction, and what pins the shape (a schema file, or the doc holding it in prose) |
+| 3 | Both sides' architecture docs' *Boundary contracts* tables | The **producer** side and the **consumer** side. An edge listed on one side only is exactly the defect the audit found |
 | 4 | The component doc's route table | The endpoint itself — method, path, auth/min role, purpose |
 | 5 | The contract file, plus whatever set your gate checks | Only if the payload has a schema file. **Having no schema file is not an exemption** — two of the five edges are pinned in prose, and prose still has to change |
 

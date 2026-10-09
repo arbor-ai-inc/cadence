@@ -60,13 +60,12 @@ consistency.
   read-model base, never via a per-field list that rots (T-21/T-22).
 - Tests: Would the tests catch a regression in the changed behavior?
 - Architecture: Does the change fit existing patterns and ownership
-  boundaries? A route one plane calls on another must move the plane graph, edge
-  list, both plane boundary tables, and the component route table with it; nothing
-  in CI checks this — see `code-review.md` § *Review contract (both reviewers)*.
+  boundaries? A route one component calls on another must move the artifacts your
+  rubric lists for that edge with it; nothing in CI checks this — see `code-review.md` § *Review contract (both reviewers)*.
 - Contract compatibility: the pre-commit gates are drift detectors, not
   compatibility checkers — see `code-review.md` § *Scope completeness*.
 - Scope completeness: an unmeasured or indistinguishable customer-affecting
-  outcome, or a capability with no console surface. Name the gap; the author
+  outcome, or a capability with no UI surface. Name the gap; the author
   scopes it in or files a follow-up. See `code-review.md` § *Scope completeness*.
 - Security and privacy: Are inputs validated, secrets protected, and access
   controls preserved?

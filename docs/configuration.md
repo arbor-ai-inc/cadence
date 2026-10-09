@@ -173,6 +173,27 @@ Overlays are read through generated wrappers, so they apply to the
 [submodule install](setup.md#or-vendor-it-as-a-git-submodule-with-no-plugin).
 Regenerate the wrappers after setting or changing this key.
 
+### `[paths].templates` — your own spec templates
+
+Unset, the spec workflows draft from cadence's `templates/`. Point it at a
+directory holding your own `_product_template.md`, `_design_template.md` and
+`_testing_plan_template.md` to keep your examples and tables. A file missing
+there falls back to cadence's copy.
+
+### `[git]` — branch, commit and PR-title names
+
+```toml
+[git]
+branch = "{owner}/{issue_lower}-{slug}"
+commit_style = "conventional"          # or "issue-prefix" (the default)
+pr_title = "{summary} ({issue})"
+```
+
+Workflows name branches, write commit messages and title PRs from these. The
+defaults are `{issue_lower}`, `issue-prefix` and `{issue}: {summary}`. With
+`conventional`, `{summary}` in the PR title is itself a Conventional Commit
+subject (`feat(api): add the export endpoint`).
+
 ### `[fanout].enabled` — build options instead of asking
 
 ```toml
@@ -212,13 +233,32 @@ recommended = "opus"
 ```
 
 A workflow reads it, compares it to the model it is actually running on, and
-**stops if they differ** — naming both, and how to switch. It enforces nothing
+**stops if they differ** — naming both, and how to switch. A workflow with its own
+entry in `[models.pins]` checks against that instead, and checks again each time it
+resumes after stopping to ask you, since a skill's pin lasts one turn. It enforces nothing
 about which model runs. What it enforces is that you **find out**.
 
 The defect this fixes is not "the wrong model ran". It is "the wrong model ran
 and nothing said so".
 
 Leave it unset if you do not care which model runs a workflow.
+
+### `[models.pins]` — pins in generated wrappers
+
+Only for a project that vendors cadence (see [setup](setup.md)). `tools/wrappers.py`
+writes each pin as `model:` into that skill's or agent's Claude wrapper:
+
+```toml
+[models.pins]
+product-spec-reviewer = "fable"
+eng-design-reviewer = "fable"
+code-review = "opus"
+```
+
+A pin on an **agent** is the durable kind: it holds for the subagent's whole run.
+A pin on a **skill** covers the turn that invoked it, as above. A name that is no
+cadence skill or agent fails the run rather than pinning nothing. Codex wrappers
+never carry one.
 
 ### Setting a model for real
 

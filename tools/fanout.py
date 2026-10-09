@@ -635,11 +635,10 @@ def cmd_fork(args):
             )
             save(root, args.issue, state)
             print(f"fanout: REFUSED fan-out: {refusal}", file=sys.stderr)
-            print(
-                "fanout: recorded in the tree and rendered in the ledger. "
-                "Ask the author via the ask tool instead.",
-                file=sys.stderr,
-            )
+            # One surviving option is a decision, not a question: its reason
+            # already says to decide and record it, so do not also say ask.
+            remedy = "" if len(options) < 2 else " Ask the author via the ask tool instead."
+            print(f"fanout: recorded in the tree and rendered in the ledger.{remedy}", file=sys.stderr)
             return 3
 
         slugs = [o[0] for o in options]

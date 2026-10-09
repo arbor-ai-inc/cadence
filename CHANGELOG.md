@@ -3,6 +3,36 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.10.0
+
+For projects that vendor cadence and have their own conventions. Every new setting
+defaults to today's behavior.
+
+- **`[models.pins]`:** per-skill or per-agent models, written by `tools/wrappers.py`
+  into the generated Claude wrappers. An agent's pin holds for its whole run; a skill's
+  covers its first turn, and the pinned workflows now check the model again on every
+  resume and stop if it differs. Cadence's published files still pin nothing.
+- **`[git]`:** `branch`, `commit_style` (`issue-prefix` or `conventional`) and
+  `pr_title`. execute-issue and git-pr-workflow name branches, commits and PR titles
+  from them.
+- **`[paths].templates`:** use your own spec templates.
+- **Wait for CI:** a PR is done when every required check has run and passed on the
+  head commit, whatever the reviewer. **Behavior change** for `[review].provider =
+  "none"`, which used to end at a locally green PR.
+- **Messages go to the issue and the ask transport, not Slack by name:** the
+  circuit-breaker findings, "PR ready", and an unanswered spec question.
+- **code-review:** no Codex-first default; the configured reviewer runs, at high
+  effort, with an optional second opinion. The cross-boundary BLOCKER names the
+  artifacts your rubric lists, not a fixed set.
+- **Facts from the source project removed:** its ruleset settings, merge-strategy
+  claims, a CI job, a lint config, a principle count and ad-domain vocabulary are now
+  checks or generic wording. Garbled genericization text fixed.
+- New rules: choose a spec's slug once; a reviewer's reading set bounds what it can
+  find; post-merge proof is the step after the merge; issue comments follow
+  explain-plain; model escalation rules; a project lesson about a cadence workflow can
+  go in an overlay.
+- `fanout.py` no longer tells you to ask when only one option survives.
+
 ## 0.9.0
 
 - **Design-only specs.** A change nothing a customer could see, be billed for, or

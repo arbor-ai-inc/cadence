@@ -120,12 +120,13 @@ escape hatch.
    | your decision log | a choice that was made and should not be silently revisited |
    | your current-state doc | what is now *true*, rather than what to do differently |
    | a `cadence.toml` value, or a check | anything mechanizable — always prefer this |
+   | `<[paths].overlays>/<workflow>.md` | a project rule added to one cadence workflow |
 
    One destination, not two. A rule in two places is the drift this mechanism exists
    to catch.
 
-   If the lesson is genuinely about a cadence workflow rather than about your project,
-   that is an upstream issue on cadence, not an edit to a vendored file — a local edit
+   If the lesson is about a cadence workflow itself, true for any project, that is an
+   upstream issue on cadence, not an edit to a vendored file — a local edit
    is silently reverted by the next plugin update.
 
 7. **Consolidate every doc you touch.** Not optional, and the reason this skill is

@@ -336,11 +336,13 @@ class TestFork(FanoutCase):
 class TestCaps(FanoutCase):
     """Caps must refuse loudly and leave the tree buildable. Never truncate."""
 
-    def assert_refused(self, code, err, needle):
+    def assert_refused(self, code, err, needle, ask=True):
         self.assertEqual(code, 3, f"expected the cap-refusal exit code 3, got {code}")
         self.assertIn("REFUSED", err)
         self.assertIn(needle, err)
-        self.assertIn("ask tool", err)
+        # A cap is a question for the author; a single survivor is a decision,
+        # and telling the agent to ask would contradict its own reason.
+        (self.assertIn if ask else self.assertNotIn)("ask tool", err)
 
     def test_too_many_options_is_refused(self):
         self.init(max_options=2)
@@ -362,7 +364,7 @@ class TestCaps(FanoutCase):
             "--decision", "Q", "--why-you", "the tradeoff is the author\'s", "--source", "app.py:1",
             "--option", "a:does a:reason a",
         )
-        self.assert_refused(code, err, "record` instead")
+        self.assert_refused(code, err, "record` instead", ask=False)
 
     def test_max_depth_is_refused(self):
         self.init(max_depth=1)

@@ -52,7 +52,9 @@ check, a balanced one for ordinary implementation, a strong independent one for
 adversarial review, and the most capable only for a named, consequential question
 cheaper models and evidence left open. Tests and fresh-context review decide
 whether the cheaper model succeeded; size or one failed attempt is no reason to
-escalate. **A delegated skill run must invoke the skill by name or pass its
+escalate. Raise effort before changing model. When escalating, pass the smallest
+relevant context and state the unresolved question; a model change never expands the
+task's scope or permissions. **A delegated skill run must invoke the skill by name or pass its
 model explicitly** — an agent merely told to follow one inherits the caller's model.
 
 ## Routing Guide
@@ -99,6 +101,9 @@ continue with the selected workflow.
 - Invoking several skills when one narrow workflow would do.
 - Using a persona for implementation instead of review perspective.
 - Delegating broad or ambiguous work to an agent without acceptance criteria.
+- The most capable model on routine implementation or prescribed checks, with no
+  named hard question; the cheapest on an open design decision or a final
+  merge-readiness call.
 - Reading roadmap or status docs as current facts without checking code and
   dates. A roadmap entry is an intention; a current-state doc can be stale.
 

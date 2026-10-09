@@ -18,7 +18,8 @@ a clean checkout of main.
    fail loud and exit. With `provider = "none"` the issue body is supplied inline —
    an empty one is still a hard stop, not a licence to invent scope.
 2. Move the issue to `[tracker].state_started`, where the tracker has one.
-3. `git checkout -b <lowercased-issue-id>` from up-to-date main (e.g. `xx-33`).
+3. Branch from up-to-date main, named per `[git].branch` (default: the lowercased
+   issue id, `xx-33`).
 4. Implement exactly what the issue and its spec describe. Scope discipline: if work
    outside the issue's scope seems necessary, that is a question, not a decision.
 
@@ -50,7 +51,8 @@ a clean checkout of main.
      a metric in an environment where metrics are disabled. "Go read X in Y" can be an
      impossibility.
 
-   **Correct the issue when it is wrong** — on the issue and in the PR body. Never fill a gap with a fabricated figure.
+   **Correct the issue when it is wrong** — on the issue and in the PR body, written per
+   [`explain-plain`](./explain-plain.md). Never fill a gap with a fabricated figure.
 
    Follow [`test-authoring`](./test-authoring.md) whenever its § *When To Use*
    applies. If the issue owns a P0 row of the spec's `testing-plan.md`, record a
@@ -76,17 +78,22 @@ a clean checkout of main.
 
    **A whole ticket with no reply is a delivery defect — file it**, do not work around
    it each run.
+
+   Everything else a human reads — every issue comment that is not a `human-brief`
+   stop point: corrections, decision records, status notes — follows
+   [`explain-plain`](./explain-plain.md).
 6. Run the project's `[commands].lint` and `[commands].test`. Fix failures before
-   proceeding. Commit in logical units with issue-id-prefixed messages.
+   proceeding. Commit in logical units, messages in `[git].commit_style`.
 7. Invoke the code-review skill ([`code-review`](./code-review.md)) and drive it to
-   LGTM.
+   LGTM **or its three-round circuit breaker** — both are terminal; open findings go
+   into the brief and the PR body.
 8. Push the branch, write the Shape B change brief the code-review step produced to a
    file, and open a PR with
-   `gh pr create --title "<issue-id>: <summary>" --body-file <brief>`. Both flags are
-   required: `--fill` would rebuild the body from commit messages and drop the brief,
-   while `--body-file` without `--title` prompts for a title and therefore fails
-   headless. Do NOT merge — squash-merge is a human decision, always.
-9. `python3 tools/ask.py notify "PR ready: <url>" --context "<issue-id>"` and move
+   `gh pr create --title "<[git].pr_title>" --body-file <brief>`. Both flags are
+   required: `--fill` drops the brief, and `--body-file` without `--title` prompts,
+   which fails headless. Do NOT merge — squash-merge is a human decision, always.
+9. Post "PR ready: <url>" on the issue (where there is a tracker) and through
+   `python3 tools/ask.py notify "PR ready: <url>" --context "<issue-id>"`, and move
    the issue to `[tracker].state_in_review`. **This announces the PR; it does not end the invocation.**
 10. **Then follow [`git-pr-workflow`](./git-pr-workflow.md) § Workflow steps 8-10 and
     § [Watching the automated review](./automated-review.md)**: wait for the automated
@@ -102,7 +109,8 @@ announcement is not mistaken for the finish.
 
 Done means all of:
 
-- The PR is open, and `[commands].lint` and `[commands].test` are green on it.
+- The PR is open, and every required check has **run and passed on the head commit**
+  (`gh pr checks <n>`). A check that never started is "not yet", not a pass.
 - `python3 tools/review_state.py --pr <n>` prints the verdict line as `AT HEAD`
   (`--json` gives the `review_landed_at_head` field a monitor reads).
   **Never read the check row instead**
@@ -110,13 +118,14 @@ Done means all of:
   Absence of findings on a freshly-opened PR is "not yet", never "nothing to do".
 
   With `[review].provider = "none"` this bullet and the watch loop do not apply; the
-  invocation ends at a green PR — say so rather than reporting an unconfigured review
-  as settled.
+  invocation ends when CI is green on the head commit — say so rather than reporting
+  an unconfigured review as settled.
 - Every finding is fixed or answered with a reply stating why it is declined —
   review **body** included (see `code-review-and-quality.md` § *Working With Automated
   Reviewers*).
 - Either the review has settled, or the separate `[review].max_rounds` post-PR bound
-  was reached, the open findings were announced through `tools/ask.py notify`, and
+  was reached, the open findings were posted on the issue and announced through
+  `tools/ask.py notify`, and
   the PR says which commit went un-re-reviewed.
 - **Any standing human `CHANGES_REQUESTED` is reported, not silently left** (the same
   command shows it). Clearing it is not this skill's job.
@@ -126,8 +135,12 @@ harness's background or monitor facility — and **that monitor acts; it does no
 observe** (a poll-only loop waits on a review nobody requested). A green row whose
 newest review is rate-limited or stale is no reason to finish or stop. What to ask
 for, when, and what counts as an answer:
-[`git-pr-workflow`](./git-pr-workflow.md#requesting-the-re-review) — do not re-derive
+[`automated-review`](./automated-review.md#requesting-the-re-review) — do not re-derive
 it, or the state reading.
+
+**The final message names the step after the merge:** proving the merged commit end
+to end in a running environment and posting the evidence on the issue. This skill
+never merges, so whoever merges runs it.
 
 **Stop earlier only when termination is imposed from outside the agent** — the user
 halts the run; the harness or runtime hits a deadline; auth, network, or tooling breaks
@@ -166,24 +179,15 @@ You Fork*. Short form:
 
   **Work the boundary from the config, never from a description of it.**
   `python3 tools/cadence_config.py must-stop <path>...` exits 5 when a path is
-  inside. Typical entries — schema and migrations, published contracts, serving or
-  payment critical paths, money and ranking logic, audit trails, anything shipped to
-  third parties — are a description; `[[must_stop]]` in `cadence.toml` is enforced.
+  inside. A list of typical surfaces is a description; `[[must_stop]]` is enforced.
 
   **An empty boundary is a real answer, and a dangerous one:** nothing routes here.
   Say so once in the PR body rather than concluding no decision was one-way.
 
-**Exit 3 on its own does not mean ask** — it is every `fork` refusal; read the printed
-reason. A cap
-(`max_options` / `max_depth` / `max_leaves`), `must-stop boundary:` or `fan-out is
-off` is the ask above. But `only N surviving option(s)` means there was never a fork to build, so
-it belongs to the first branch: decide it and `record` — do not escalate it.
+**Exit 3 alone does not mean ask** — it is every `fork` refusal; read the reason. A
+cap, `must-stop boundary:` or `fan-out is off` is the ask above; `only N surviving
+option(s)` was never a fork, so decide it and `record`.
 
-`fanout.py` prints `Ask the author ... instead` under **every** refusal, including
-that one, whose reason says `decide it and \`record\` instead`. The reason is right and
-the remedy line is not; this doc is the tie-breaker until the tool is fixed.
-
-Only the ask branch reaches step 5 — `must-stop`, a `fork` refused for a cap, and any
-one-way door when fan-out is off.
+Only the ask branch reaches step 5.
 A decision you make and a decision you fan out are both answered without a question.
 A fanned decision is deferred, not answered, so it is still mirrored onto the issue.
