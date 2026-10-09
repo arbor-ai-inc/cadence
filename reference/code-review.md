@@ -137,6 +137,9 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
 - **A script fix claims "this script runs."** A fix in a script nothing executes reads
   exactly like a fix (T-08). Trace the caller — CI workflow, runbook step, `make`
   target; step 4's revert check also catches it.
+- **A docs-only diff is all claims about code outside it, nearly ungated** (T-29,
+  T-30). **A spec sentence quoted into a doc is a premise** — recompute it. **A contract
+  gate proves a declaration changed**, not that it matches the types it describes.
 - **A command in a doc makes the same claim, ungated.** **`--help` is necessary, not
   sufficient** — a wrong *default* passes it (T-09). Run it in the environment the doc
   names and check the promised observable; if unsafe or impossible, list it in the PR
@@ -215,6 +218,9 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
    sit in the docstring, field comment, architecture doc and covering test (T-19,
    T-20). **Grep the claim's most distinctive phrase across the repo, fix every hit,
    and re-grep** — the phrase, not the ticket id, which copies rarely carry.
+   **Then sweep the dimension, not only the phrase:** ask which other value, mode,
+   environment or sibling the same sentence was true of, and grep for those, including
+   retired phrasings (T-31, T-32, T-33).
 
 4. **Verify each resolution against the failure it claims to close.** For every
    BLOCKER and SHOULD fix **that changes executable behavior**, revert it — one at a
@@ -233,8 +239,10 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
    that is not an explicit pass-or-fail is a broken harness, never a survival.
 5. Re-run pre-commit and tests, commit the resolutions, re-run the reviewer.
 6. Circuit breaker: max 3 rounds. If not LGTM after round 3, post the open findings
-   to Slack via `ask` as a Shape B change brief and stop — do not loop forever, do
-   not open the PR silently.
+   to Slack via `ask` as a Shape B change brief and stop. **Stop means stop:** no
+   fourth round and no "one last fix" on the way out — a round-N finding is often a
+   defect the round-(N−1) fix introduced (C-15). A commit after the last review is
+   **named in the brief and PR body** with what it changed; never call that head LGTM.
 7. On LGTM, write and print the Shape B change brief (`human-brief.md`) — the only
    durable record, and the PR body summary. Its *where the reviewer and I disagreed*
    section is required whenever the loop ran ("every finding was accepted as written"

@@ -27,7 +27,8 @@ a clean checkout of main.
    ([`C-13`](../examples/case-studies.md), [`C-14`](../examples/case-studies.md)).
    Premises go **stale** (siblings merged since filing) and, more often, were **wrong
    when written** — which checking only what a merge could change misses. **Recompute
-   every premise from the tree at your own commit, whatever its age:**
+   every premise from the tree at your own commit, whatever its age — including one you
+   are only quoting into a doc:**
 
    - **A count, or a quoted instance, is a lower bound — never a set.** Grep the
      **field or identifier** and read every value: the quoted string finds only the
@@ -36,6 +37,10 @@ a clean checkout of main.
      edit, let it enumerate — a grep for constructors is one more premise.
    - **A name the issue uses may not exist yet** — a decomposed epic writes ACs in its
      **end-state** vocabulary. One grep settles it.
+   - **"What calls this" is a reachability question.** A claim that something is or is
+     not called, or a change other code depends on, needs its callers' callers too:
+     grep the name in every form it travels under, or use a call-graph tool if the
+     project has one (source wins over a stale map).
    - **Read a cited rule for the claim it was cited for.** Confirming the part you
      already believe is not reading it.
    - **Where the issue says to read something is a claim too; the guard goes where the
