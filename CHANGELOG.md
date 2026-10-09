@@ -3,6 +3,17 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.8.1
+
+- **Scrubbed the source project's names** from the docs, case studies and tests: spec
+  names, PR numbers, branch names, file and table names. Wording changed; no rule did.
+- **`tests/check_vocab.py`:** fails if a name from a private repo appears in cadence.
+  The list is derived at run time from the repos you point it at and never stored.
+- **`check_no_leaks.py`** stores private names as digests (`--hash NAME` adds one), and
+  matches issue ids in any case.
+- `code-review` and `spec-pipeline` name cadence's `tools/ask.py`, not a source-project
+  script.
+
 ## 0.8.0
 
 - **Fan-out is now opt-in: `[fanout].enabled`, default `false`.** With it off, a

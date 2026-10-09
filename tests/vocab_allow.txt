@@ -1,0 +1,23 @@
+# Generic terms check_vocab.py must not treat as private, one regex per line
+# (full match, case-insensitive). Add a term only if it would mean the same thing
+# in any project; a private name belongs renamed, not allowed.
+# `path: <file>` exempts a whole file.
+
+(ack-|design-)?round-\d+     # review round files
+batch-\d+                    # retro batches
+testing-plan
+testing-strategy
+agent[-_]skills
+architectural-principles
+carried-advisories
+project-conventions
+self-test
+review[-_]gate
+template-form
+data-model
+package-lock
+env-vars
+
+# Maps the source project's tool names to cadence's; that is its job.
+path: scripts/drift_report.py
+check_suites    # GitHub API name

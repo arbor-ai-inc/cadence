@@ -134,6 +134,7 @@ gates, not something an adopter needs. In your own project the equivalent is
 
 ```bash
 python3 tests/check_no_leaks.py           # nothing private survived the extraction
+python3 tests/check_vocab.py --source <private repo>   # no private file or spec name (before a release)
 python3 tools/cadence_config.py --selftest
 python3 tools/spec_hash.py --selftest
 python3 tools/ask.py --selftest

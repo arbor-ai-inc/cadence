@@ -18,7 +18,7 @@ Give the reviewer the architectural context, not just the diff: principles subse
 
 Pre-commit + tests green before round 1 and after every resolution round.
 
-Resolve all BLOCKER/SHOULD findings; product questions go to the ask transport via `slack_ask.py ask`.
+Resolve all BLOCKER/SHOULD findings; product questions go to the ask transport via `.cadence/tools/ask.py`.
 
 Circuit breaker at 3 rounds: post open findings to the ask transport and stop. Never merge.
 
