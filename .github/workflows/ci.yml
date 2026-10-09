@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -19,6 +21,17 @@ jobs:
       # signal rather than one red line among many.
       - name: no leaks from the private source tree
         run: python3 tests/check_no_leaks.py
+
+      # History was rewritten on 2026-10-09 to remove names from the private
+      # source tree. A clone from before then still has the old commits, and
+      # merging any branch from it would bring them back. Every old commit
+      # descends from this root, so finding it means old history.
+      - name: no pre-rewrite history
+        run: |
+          if git cat-file -e ca28ff3636c46b32df255efc7e4f92d7c45b9965^{commit} 2>/dev/null; then
+            echo "This branch carries cadence's pre-rewrite history. Re-clone, and copy your changes over." >&2
+            exit 1
+          fi
 
       # The derived-name check needs the private repos, which CI does not have;
       # it runs on a maintainer's machine. CI proves only that it works.
