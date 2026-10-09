@@ -6,6 +6,12 @@ casemap.json
 # Local fan-out state and worktrees, per tools/fanout.py
 .cadence/fanout/
 .cadence/worktrees/
+# ...and the same two when this repo IS the project's .cadence/ (a git
+# submodule). fanout.py writes them under <project>/.cadence/, which is then
+# this checkout, and the project's own .gitignore cannot reach inside a
+# submodule. Without these the submodule shows as modified on every fan-out.
+/fanout/
+/worktrees/
 
 # Eval output
 evals/results/

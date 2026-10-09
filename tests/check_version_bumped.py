@@ -47,6 +47,16 @@ SHIPPED_PREFIXES = (
     ".claude-plugin/",
 )
 
+# Single files at the root that users receive. Exact names, not prefixes: the
+# dispatcher and its alias (copied by init, run directly from a vendored
+# .cadence/), and .gitignore, whose /fanout/ and /worktrees/ lines keep a
+# vendored submodule clean.
+SHIPPED_FILES = {"cadence", "check-scope", ".gitignore"}
+
+
+def is_shipped(f: str) -> bool:
+    return f.startswith(SHIPPED_PREFIXES) or f in SHIPPED_FILES
+
 
 def changed_files(rng: str | None) -> list[str]:
     cmd = ["git", "-C", str(ROOT), "diff", "--name-only", "--cached"]
@@ -70,7 +80,7 @@ def selftest() -> int:
         if not cond:
             failures.append(label)
 
-    shipped = lambda f: f.startswith(SHIPPED_PREFIXES)
+    shipped = is_shipped
     check("a skill counts as shipped", shipped("skills/retro/SKILL.md"))
     check("a reference doc counts as shipped", shipped("reference/retro.md"))
     check("a tool counts as shipped", shipped("tools/fanout.py"))
@@ -82,6 +92,8 @@ def selftest() -> int:
     check("the README does not count", not shipped("README.md"))
     # The manifest itself is how the bump arrives.
     check("the manifest counts as shipped", shipped(MANIFEST))
+    check("the dispatcher counts as shipped", shipped("cadence"))
+    check("a root file merely named like it does not", not shipped("cadence-notes.md"))
     check("a version is declared", declared_version() is not None)
 
     for line in failures:
@@ -103,7 +115,7 @@ def main() -> int:
         return selftest()
 
     files = changed_files(args.rng)
-    shipped = sorted(f for f in files if f.startswith(SHIPPED_PREFIXES) and f != MANIFEST)
+    shipped = sorted(f for f in files if is_shipped(f) and f != MANIFEST)
     if not shipped:
         return 0
     if MANIFEST in files:

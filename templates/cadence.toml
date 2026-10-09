@@ -80,6 +80,10 @@ principles = "docs/architectural-principles.md"
 # review; this is your policy on who signs off. Start from
 # templates/code-review-standards.template.md.
 review_standards = "docs/code-review-standards.md"
+# Optional: per-workflow project addenda, <dir>/<name>.md. Wrappers generated
+# by tools/wrappers.py tell the agent to read the matching one after the
+# canonical doc. An overlay adds rules; it never removes cadence's.
+# overlays = "docs/agent-overlays"
 
 
 [models]

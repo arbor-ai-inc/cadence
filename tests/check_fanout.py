@@ -1298,5 +1298,101 @@ class TestHandoff(FanoutCase):
         self.assertNotIn("|---|", out)  # chat transports do not render markdown tables
 
 
+class TestVendoredSubmodule(FanoutCase):
+    """A project that vendors cadence at .cadence/ as a git submodule.
+
+    Its wrappers point at .cadence/reference/, so a leaf whose submodule is
+    empty runs its review step against nothing, silently.
+    """
+
+    def setUp(self):
+        super().setUp()
+        upstream = self.repo.parent / "cadence-upstream"
+        upstream.mkdir()
+        git("init", "-b", "main", cwd=upstream)
+        git("config", "user.email", "test@example.com", cwd=upstream)
+        git("config", "user.name", "Test", cwd=upstream)
+        # Cadence's own .gitignore covers the state fanout writes into it.
+        (upstream / ".gitignore").write_text("/fanout/\n/worktrees/\n", encoding="utf-8")
+        (upstream / "reference").mkdir()
+        (upstream / "reference" / "code-review.md").write_text("# review\n", encoding="utf-8")
+        git("add", "-A", cwd=upstream)
+        git("commit", "-m", "upstream", cwd=upstream)
+
+        # The project's .gitignore must not hide the submodule itself.
+        (self.repo / ".gitignore").write_text("", encoding="utf-8")
+        git("-c", "protocol.file.allow=always", "submodule", "add", str(upstream), ".cadence",
+            cwd=self.repo)
+        # Point the declared URL somewhere that does not exist: a leaf must be
+        # populated from the local checkout, never from the network.
+        git("config", "-f", ".gitmodules", "submodule..cadence.url",
+            str(self.repo.parent / "no-such-remote"), cwd=self.repo)
+        git("add", "-A", cwd=self.repo)
+        git("commit", "-m", "vendor cadence", cwd=self.repo)
+        # ...and the URL the main checkout cloned from, which every worktree
+        # shares. Only the worktree-local override can make a leaf work now.
+        git("config", "submodule..cadence.url", str(self.repo.parent / "no-such-remote"),
+            cwd=self.repo)
+
+    def test_a_leaf_gets_the_vendored_copy(self):
+        self.init()
+        self.fork_two()
+        for slug in ("inline", "redis"):
+            leaf = self.repo / STATE_DIR / "worktrees" / "xx-999" / slug
+            self.assertTrue((leaf / ".cadence" / "reference" / "code-review.md").is_file(),
+                            f"{slug}: the vendored copy is empty in the leaf")
+            self.assertEqual(git("status", "--porcelain", cwd=leaf), "", f"{slug} is dirty")
+
+    def test_the_main_checkout_stays_clean_and_keeps_its_url(self):
+        before = git("config", "submodule..cadence.url", cwd=self.repo)
+        self.init()
+        self.fork_two()
+        self.assertEqual(git("status", "--porcelain", cwd=self.repo), "")
+        self.assertEqual(git("config", "submodule..cadence.url", cwd=self.repo), before)
+
+    def test_a_missing_pinned_commit_warns_instead_of_failing_the_fork(self):
+        """A gitlink bumped without `submodule update`: the main checkout lacks it."""
+        sub = self.repo / ".cadence"
+        git("-c", "user.email=t@e", "-c", "user.name=T", "commit", "--allow-empty", "-m", "ahead", cwd=sub)
+        ahead = git("rev-parse", "HEAD", cwd=sub)
+        git("add", ".cadence", cwd=self.repo)
+        git("commit", "-m", "bump", cwd=self.repo)
+        git("reset", "--hard", "HEAD~1", cwd=sub)
+        git("reflog", "expire", "--expire=now", "--all", cwd=sub)
+        git("gc", "--prune=now", "--quiet", cwd=sub)
+        self.init()
+        code, _out, err = self.run_cli(
+            "fork", ISSUE, "--decision", "Q", "--why-you", "the tradeoff is yours",
+            "--source", "app.py:1",
+            "--option", "inline:dict:no dependency", "--option", "redis:shared:survives restart",
+        )
+        self.assertEqual(code, 0, err)
+        self.assertIn(".cadence/ is empty", err)
+        self.assertNotEqual(ahead, "")
+
+    def test_other_submodules_are_left_alone(self):
+        """Only cadence's own copy is populated; any other submodule is as before."""
+        other = self.repo.parent / "other-upstream"
+        other.mkdir()
+        git("init", "-b", "main", cwd=other)
+        (other / "f.txt").write_text("x\n", encoding="utf-8")
+        git("add", "-A", cwd=other)
+        git("-c", "user.email=t@e", "-c", "user.name=T", "commit", "-m", "o", cwd=other)
+        git("-c", "protocol.file.allow=always", "submodule", "add", str(other), "vendor/lib",
+            cwd=self.repo)
+        git("commit", "-m", "other", cwd=self.repo)
+        self.init()
+        self.fork_two()
+        leaf = self.repo / STATE_DIR / "worktrees" / "xx-999" / "inline"
+        self.assertFalse((leaf / "vendor" / "lib" / "f.txt").exists())
+        self.assertTrue((leaf / ".cadence" / "reference" / "code-review.md").is_file())
+
+    def test_abandon_still_removes_a_leaf_with_a_submodule(self):
+        self.init()
+        self.fork_two()
+        self.ok("abandon", ISSUE)
+        self.assertEqual(self.worktree_paths(), [str(self.repo)])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2 if "-v" in sys.argv else 1)
