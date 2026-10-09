@@ -267,7 +267,7 @@ Leave it unset if you do not care which model runs a workflow.
 [models.pins]
 product-spec-reviewer = "opus"
 eng-design-reviewer = "opus"
-execute-issue = "sonnet"
+execute-issue = "opus"
 ```
 
 In a project that vendors cadence (see [setup](setup.md)), `tools/wrappers.py`
