@@ -54,6 +54,81 @@ clone; the second is what actually changes your install:
 A stale clone and a stale install look identical from the `/` menu, so if a
 skill you expect is missing, check the version rather than the menu.
 
+### Or: vendor it as a git submodule, with no plugin
+
+Use this instead of the plugin when you want **skill names without the
+`cadence:` prefix**, when the repo is also driven by **Codex** (which cannot load
+a plugin), or when you want the version **pinned in git** so every machine, CI
+run and cloud agent gets the same copy.
+
+```bash
+git submodule add https://github.com/arbor-ai-inc/cadence .cadence
+git -C .cadence checkout v0.5.0          # a release tag; pin one
+git add .gitmodules .cadence
+python3 .cadence/tools/init_project.py --retros
+python3 .cadence/tools/wrappers.py --targets claude,codex
+```
+
+`wrappers.py` writes thin, generated wrappers that point into `.cadence/`:
+`.claude/skills/<name>/SKILL.md`, `.codex/skills/<name>/SKILL.md` and
+`.claude/agents/<name>.md`, under today's names (`/execute-issue`, not
+`/cadence:execute-issue`). Commit them. Then gate them, so a hand edit or a
+submodule bump nobody regenerated after cannot pass:
+
+```yaml
+- id: cadence-wrappers
+  name: cadence wrappers are fresh
+  entry: python3 .cadence/tools/wrappers.py --targets claude,codex --check
+  language: system
+  pass_filenames: false
+  always_run: true
+```
+
+Do **not** also install the plugin: every skill would then exist twice, once
+with the prefix and once without, both matching the same requests.
+
+What changes:
+
+- **`./.cadence/cadence` is the submodule's own dispatcher.** It resolves the copy
+  it sits in, so every `./.cadence/cadence ...` command in these docs works
+  unchanged. `init_project.py` sees it already there and keeps it, and the same
+  goes for `.cadence/check-scope`: point step 5's hook at it directly.
+- **Secrets come from the environment**, since there is no plugin to prompt for
+  them: `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` for `[ask].provider = "slack"`.
+- **Clones need the submodule.** `git clone --recurse-submodules`, or
+  `git submodule update --init` after a plain clone. In GitHub Actions, set
+  `submodules: true` on `actions/checkout`. Check that any cloud agent you use
+  initializes submodules too; one that does not sees an empty `.cadence/`.
+- **Fan-out leaves are handled.** `fanout.py` populates `.cadence/` in each leaf
+  worktree from your local checkout, without the network. If your checkout lacks
+  the pinned commit (a bump nobody ran `git submodule update` after), the leaf
+  keeps an empty `.cadence/` and fan-out warns. Other submodules are untouched.
+- **Updating is a submodule bump**, then regenerate:
+
+  ```bash
+  git -C .cadence fetch --tags && git -C .cadence checkout v0.6.0
+  python3 .cadence/tools/wrappers.py --targets claude,codex
+  ```
+
+  Dependabot can open the bump for you:
+
+  ```yaml
+  # .github/dependabot.yml
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  ```
+
+  It proposes the newest commit on cadence's default branch, not the newest
+  tag. Every change that ships to users bumps cadence's version and gets a tag,
+  so the two rarely differ, but check the tag before merging. The bump PR fails
+  the wrappers gate until someone regenerates, which is the point: the wrappers
+  just changed.
+
+**Project-specific rules** go in overlays, never in `.cadence/`. See
+[`[paths].overlays`](configuration.md#pathsoverlays--project-rules-on-top-of-a-workflow).
+
 ## 2. Scaffold the config — required
 
 From your repo:

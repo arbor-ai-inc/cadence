@@ -1,0 +1,43 @@
+name: release
+
+# Tag every version that reaches main as v<version>, from plugin.json.
+#
+# Plugin installs pin to plugin.json's `version`. A project that vendors cadence
+# as a git submodule pins a commit instead, and a tag is how it names a
+# version rather than a hash. Derived here, not pushed by hand, so a tag can
+# never disagree with the manifest it names.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+# Two quick pushes carrying the same new version would both see no tag, and the
+# second push of it would fail.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: tag v<version> if it is new
+        run: |
+          version="$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")"
+          tag="v${version}"
+          # Already tagged: a commit that ships nothing (docs, tests, CI) keeps
+          # the version, so the tag rightly stays on the commit that set it.
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${tag}" -m "cadence ${version}"
+          git push origin "${tag}"

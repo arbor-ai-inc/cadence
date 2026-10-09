@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# cadence's tool dispatcher. init_project.py copies it into a project. Safe to commit.
+#
+# One entry point to cadence's tools, callable from a plain shell, whether
+# cadence is vendored at .cadence/ or installed as a plugin. A plugin's path is
+# version-pinned (~/.claude/plugins/cache/cadence/cadence/<version>/) and
+# ${CLAUDE_PLUGIN_ROOT} is only set inside a skill, so neither can be written
+# into a hook config; this resolves cadence at run time instead.
+#
+#   ./.cadence/cadence config                 # effective configuration
+#   ./.cadence/cadence config --json
+#   ./.cadence/cadence must-stop <path>...    # exit 5 if inside the boundary
+#   ./.cadence/cadence check-scope            # the fan-out commit gate
+#   ./.cadence/cadence fanout <args>          # the fan-out engine
+#   ./.cadence/cadence review-state --pr <n>  # honest review state
+#   ./.cadence/cadence spec-hash spec <file>
+#   ./.cadence/cadence ask <args>
+#   ./.cadence/cadence root                   # which plugin directory it resolved
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+
+if [ -n "${CADENCE_PLUGIN_ROOT:-}" ]; then
+  root="$CADENCE_PLUGIN_ROOT"
+elif [ -f "$here/tools/cadence_config.py" ]; then
+  # This file IS cadence's own: the project vendors cadence at .cadence/ (a git
+  # submodule, say) rather than installing the plugin. Use the copy it sits in,
+  # which is the version the project pinned. Searching the plugin cache here
+  # would run some other version's tools against this one's wrappers.
+  root="$here"
+else
+  # Prefer the INSTALLED version under cache/, newest first (`sort -V`, so
+  # 0.10.0 beats 0.9.0).
+  #
+  # Not a single find over the whole plugins tree: that also matches the
+  # marketplace clone, and "marketplaces" sorts after "cache", so the clone
+  # always won. The clone advances on `/plugin marketplace update` while the
+  # installed plugin only advances on `/plugin update` — so the loser was the
+  # version the SKILLS come from. Skills on one version and tools on another is
+  # a mismatch nothing reports.
+  # `|| true` is load-bearing: find exits non-zero when the directory does not
+  # exist, and under `set -euo pipefail` that kills the script silently.
+  root="$(find "$HOME/.claude/plugins/cache" -maxdepth 4 -type d -name tools -path '*cadence*' 2>/dev/null \
+          | sed 's|/tools$||' | sort -V | tail -1 || true)"
+
+  # Fall back to the marketplace clone only if nothing is installed — which
+  # means the marketplace was added but the plugin never installed, so the
+  # skills are not active either. Say so rather than working silently.
+  if [ -z "${root:-}" ]; then
+    root="$(find "$HOME/.claude/plugins/marketplaces" -maxdepth 3 -type d -name tools -path '*cadence*' 2>/dev/null \
+            | sed 's|/tools$||' | sort -V | tail -1 || true)"
+    if [ -n "${root:-}" ]; then
+      echo "cadence: using the marketplace clone at $root — no INSTALLED version found." >&2
+      echo "  The plugin's skills are probably not active. Run: /plugin install cadence@cadence" >&2
+    fi
+  fi
+fi
+
+if [ -z "${root:-}" ] || [ ! -d "$root/tools" ]; then
+  echo "cadence: could not find the installed plugin." >&2
+  echo "  Install it:  /plugin marketplace add arbor-ai-inc/cadence" >&2
+  echo "               /plugin install cadence@cadence" >&2
+  echo "  Or set CADENCE_PLUGIN_ROOT to the plugin directory." >&2
+  echo >&2
+  echo "  NOTE: if a commit hook calls this, the must-stop boundary is NOT" >&2
+  echo "  being enforced until it works — which looks identical to working." >&2
+  exit 1
+fi
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  config)       exec python3 "$root/tools/cadence_config.py" "$@" ;;
+  must-stop)    exec python3 "$root/tools/cadence_config.py" must-stop "$@" ;;
+  check-scope)  exec python3 "$root/tools/fanout.py" check-scope "$@" ;;
+  fanout)       exec python3 "$root/tools/fanout.py" "$@" ;;
+  review-state) exec python3 "$root/tools/review_state.py" "$@" ;;
+  spec-hash)    exec python3 "$root/tools/spec_hash.py" "$@" ;;
+  ask)          exec python3 "$root/tools/ask.py" "$@" ;;
+  init)         exec python3 "$root/tools/init_project.py" "$@" ;;
+  root)         echo "$root"; exit 0 ;;
+  ""|-h|--help)
+    sed -n '4,18p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0 ;;
+  *)
+    echo "cadence: unknown command '$cmd'. Run with --help." >&2
+    exit 1 ;;
+esac

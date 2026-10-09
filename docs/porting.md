@@ -56,9 +56,12 @@ unavailable. That affects:
 Under Codex use `stdout` or `slack`; the required content of a decision brief is
 identical either way, only the rendering changes.
 
-The generated adapters in `adapters/codex/` point at `.cadence/`, so vendor the
-plugin's `reference/`, `tools/` and `templates/` there rather than relying on a
-plugin root that only Claude Code resolves.
+Codex has no plugin root, so vendor cadence at `.cadence/` as a git submodule
+and generate wrappers into `.codex/skills/` with `wrappers.py`; see
+[the submodule install](setup.md#or-vendor-it-as-a-git-submodule-with-no-plugin).
+`adapters/codex/` holds Codex adapters for the plugin's prefixed names. If you
+copied those into `.codex/skills/` before, delete them first: `wrappers.py`
+never overwrites a file it did not generate, and reports each one instead.
 
 ## A different automated reviewer
 
