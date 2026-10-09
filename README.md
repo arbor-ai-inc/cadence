@@ -139,6 +139,7 @@ python3 tools/ask.py --selftest
 python3 tools/review_state.py             # self-test
 python3 scripts/gen_adapters.py --check
 python3 tests/check_agent_skills.py
+python3 tests/check_doc_budget.py         # every reference doc within its byte budget
 python3 tests/check_fanout.py             # 74 tests over real git worktrees
 python3 tests/check_install.py            # an adopter's first hour, end to end
 python3 tests/check_user_docs.py          # no doc command an adopter cannot run

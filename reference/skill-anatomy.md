@@ -304,6 +304,20 @@ directories for symmetry.
 6. Token-conscious. If removing a section would not change agent behavior,
    remove it.
 
+**Every byte of a reference doc is paid on every run that loads it**, so three
+mechanics back principles 5 and 6:
+
+- **Material that applies only sometimes gets its own doc**, routed to by a
+  condition: [`automated-review`](./automated-review.md) loads only with a PR-bot
+  reviewer, [`branch-updates`](./branch-updates.md) only when stacking or updating a
+  branch.
+- **A rule carries one sentence of why and its case id.** The incident itself goes in
+  [`examples/case-studies.md`](../examples/case-studies.md), where a reader who doubts
+  the rule can find it.
+- **Each doc has a byte budget** in `tests/doc_budget.json`, checked by
+  `tests/check_doc_budget.py`. A new rule makes room, or raises the budget in the same
+  change with the reason stated.
+
 ## Naming Conventions
 
 - Canonical workflow files: `lowercase-hyphen-separated.md`.
