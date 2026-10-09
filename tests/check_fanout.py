@@ -1353,7 +1353,7 @@ class TestVendoredSubmodule(FanoutCase):
     def test_a_missing_pinned_commit_warns_instead_of_failing_the_fork(self):
         """A gitlink bumped without `submodule update`: the main checkout lacks it."""
         sub = self.repo / ".cadence"
-        git("commit", "--allow-empty", "-m", "ahead", cwd=sub)
+        git("-c", "user.email=t@e", "-c", "user.name=T", "commit", "--allow-empty", "-m", "ahead", cwd=sub)
         ahead = git("rev-parse", "HEAD", cwd=sub)
         git("add", ".cadence", cwd=self.repo)
         git("commit", "-m", "bump", cwd=self.repo)
