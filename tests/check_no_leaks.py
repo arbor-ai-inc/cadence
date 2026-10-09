@@ -15,6 +15,7 @@ Usage:
     check_no_leaks.py               # scan the whole repo; what CI and pre-commit run
     check_no_leaks.py --list        # print every rule and where it is exempt
     check_no_leaks.py path ...      # scan only these paths (pre-commit passes files)
+    check_no_leaks.py --hash NAME   # the digest to list a new private name under
 
 Exit codes:
     0  clean
@@ -24,6 +25,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import sys
 from dataclasses import dataclass, field
@@ -54,9 +56,21 @@ class Rule:
     why: str
     exempt: frozenset = field(default_factory=frozenset)
     flags: int = re.IGNORECASE
+    # When set, `pattern` only finds candidates, and a candidate is a leak only
+    # if its digest is listed. The private names stay out of this public file.
+    hashed: frozenset = field(default_factory=frozenset)
 
     def compiled(self) -> re.Pattern:
         return re.compile(self.pattern, self.flags)
+
+
+def digest(text: str) -> str:
+    """What a hashed rule stores: `check_no_leaks.py --hash <name>` prints it.
+
+    It keeps a name from being read off this file, not from being guessed: anyone
+    can hash a candidate and compare.
+    """
+    return hashlib.sha256(text.lower().encode()).hexdigest()[:16]
 
 
 RULES: tuple[Rule, ...] = (
@@ -86,7 +100,7 @@ RULES: tuple[Rule, ...] = (
         "private-issue-id",
         r"\b(?:ALT|ENG)-\d+\b",
         "a private issue id; cite the case map (C-NN) from examples/case-studies.md instead",
-        flags=0,
+        # Case-insensitive: a branch name carries the id in lower case.
     ),
     Rule(
         "private-tracker-url",
@@ -102,9 +116,32 @@ RULES: tuple[Rule, ...] = (
     # --- codebase structure: the service and doc tree of the private repo ---
     Rule(
         "private-service-path",
-        r"\b(?:services|platform)/(?:bidder|recirculation|crawler|catalog|openrtb"
-        r"|auctioncore|fallback_composer|api|formats|ui|offline)\b",
+        r"\b(?:services|platform)/\w+",
         "an internal service path",
+        hashed=frozenset({
+            "0381c4f6d798e329",
+            "0970f2351296b7e6",
+            "0ef04126762cff1b",
+            "2c3fb52b571e9bc8",
+            "2dd0d2ff34c21708",
+            "303628c2970ff38a",
+            "3ed9913ca8c9a1c9",
+            "4972abacac21e5f6",
+            "4f6870b0db07e254",
+            "521d60840480a264",
+            "53a53be63bfdc26e",
+            "5bbbcbd15bcf6d0e",
+            "5ea103bd8adc451d",
+            "758223de23b596e4",
+            "75830963dcd85726",
+            "778b5581a3dbf974",
+            "80dc29d905bfcf27",
+            "a13ac184d370487e",
+            "ac7b9a375e2637f5",
+            "af4c2ce27a4f7027",
+            "f01d4a6c3c110add",
+            "fe3b7a5f1359cc0a",
+        }),
     ),
     Rule(
         "private-docs-path",
@@ -113,9 +150,14 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "private-state-doc",
-        r"PROJECT_STATE|PRODUCT_CAPABILITY_STATUS|GATED_CONTRACTS",
+        r"\b[A-Z]+(?:_[A-Z]+)+\b",
         "an internal state or contract artifact",
         flags=0,
+        hashed=frozenset({
+            "1a0c1090b6d92417",
+            "23b87e90dd3a3dc9",
+            "a96212c7c46cb6ca",
+        }),
     ),
     Rule(
         "private-venv-incantation",
@@ -148,11 +190,17 @@ RULES: tuple[Rule, ...] = (
         "a non-public model alias; use the [models] config instead",
         flags=re.IGNORECASE | re.MULTILINE,
     ),
-    # --- ad-tech product vocabulary that should have left with author-format ---
+    # --- product vocabulary from a workflow that was left out of cadence ---
     Rule(
         "product-vocabulary",
-        r"\barbor\.\w+@\d|--arbor-|arbor-tokens:|runtime-registry\.json",
-        "ad-format product vocabulary from the excluded author-format workflow",
+        r"\barbor\.\w+@\d|--arbor-|arbor-tokens:",
+        "product vocabulary from a workflow that was not extracted",
+    ),
+    Rule(
+        "private-file-name",
+        r"\b[\w-]+\.json\b",
+        "a generated file from the private tree",
+        hashed=frozenset({"93ff5f8c8aef9b94"}),
     ),
 )
 
@@ -259,6 +307,8 @@ def scan(path: Path) -> list[tuple[int, str, str, str]]:
     hits = []
     for rule in rules_for(rel):
         for m in rule.compiled().finditer(text):
+            if rule.hashed and digest(m.group(0)) not in rule.hashed:
+                continue
             # Report the line, not the offset: a reviewer needs to open it.
             lineno = text.count("\n", 0, m.start()) + 1
             if rule.name == "company-name":
@@ -296,18 +346,20 @@ PROBES: dict[str, str] = {
     "company-name": "the Arbor AI workflow",
     "company-email-domain": "you@arborai.xyz",
     "company-github-org": "@arbor-ai-inc/infra",
-    "private-issue-id": "carried forward from ENG-147, and ALT-302",
+    "private-issue-id": "carried forward from ENG-147, and branch jdoe/alt-302-x",
     "private-tracker-url": "https://linear.app/arbor-ai/issue/ALT-162",
     "private-decision-id": "recorded in DECISIONS.md (D087)",
-    "private-service-path": "guard services/bidder/internal/serving/ and platform/api",
+    # A hashed rule's probe is a stand-in; selftest adds the stand-in's digest.
+    "private-service-path": "guard services/probe-svc/internal/",
     "private-docs-path": "see docs/contracts/README.md",
-    "private-state-doc": "canonical current-state is PROJECT_STATE.md",
+    "private-state-doc": "canonical current-state is PROBE_STATE.md",
     "private-venv-incantation": 'run PATH="$(pwd)/platform/api/venv/bin:$PATH" pre-commit',
     "gcp-project-slug": "gcloud config set project arborai-dev",
     "secret-naming-convention": "JWT_SECRET=arborai-jwt-secret:latest",
     "private-slack-channel": "post to #eng-standup",
     "private-model-alias": "model: fable\n",
     "product-vocabulary": "the arbor.button@2 component and --arbor-color tokens",
+    "private-file-name": "regenerate probe-registry.json",
     "review-provider-hardcoded": "run @coderabbitai full review",
 }
 
@@ -325,8 +377,16 @@ def selftest() -> int:
         probe = PROBES.get(rule.name)
         if probe is None:
             continue
-        if not rule.compiled().search(probe):
+        m = rule.compiled().search(probe)
+        if not m:
             failures.append(f"rule {rule.name!r} did not match its own probe {probe!r}")
+        elif rule.hashed:
+            # Fires on a listed digest, and only on a listed one.
+            if digest(m.group(0)) in rule.hashed:
+                failures.append(f"rule {rule.name!r}: the probe's digest must not be a real entry")
+            listed = rule.hashed | {digest(m.group(0))}
+            if not any(digest(x.group(0)) in listed for x in rule.compiled().finditer(probe)):
+                failures.append(f"rule {rule.name!r} did not fire on a listed digest")
 
     # The company name must be caught in a workflow doc and allowed in README.
     company = next(r for r in RULES if r.name == "company-name")
@@ -403,7 +463,12 @@ def main() -> int:
     ap.add_argument("paths", nargs="*", help="files to scan; default is the whole repo")
     ap.add_argument("--list", action="store_true", help="print the rules and exit")
     ap.add_argument("--selftest", action="store_true", help="prove every rule fires, then exit")
+    ap.add_argument("--hash", metavar="NAME", help="print the digest a hashed rule stores for NAME")
     args = ap.parse_args()
+
+    if args.hash:
+        print(digest(args.hash))
+        return 0
 
     if args.selftest:
         return selftest()
@@ -414,6 +479,8 @@ def main() -> int:
             print(f"  {r.name}")
             print(f"      why:     {r.why}")
             print(f"      pattern: {r.pattern}")
+            if r.hashed:
+                print(f"      hashed:  {len(r.hashed)} private names, stored as digests")
             if r.exempt:
                 print(f"      exempt:  {', '.join(sorted(r.exempt))}")
             if r is CODERABBIT:

@@ -9,7 +9,7 @@ Strategy*.
 
 A squash puts **one new commit with a new SHA** on `main`. A child branch still
 carrying its parent's original commits therefore has a merge base *predating* the
-squash, and GitHub renders the parent's whole diff inside the child's PR. #448 hit
+squash, and GitHub renders the parent's whole diff inside the child's PR. PR A hit
 this exactly: correct content, green CI, and **20 files shown instead of 12** — so
 the reviewer would have re-reviewed the parent.
 
@@ -19,7 +19,7 @@ while GitHub's **3-dot** diff from the merge base does not.
 
 **Merging `main` forward fixes it.** An earlier revision of this section said the merge
 "would leave the duplicated diff anyway". That is **wrong**, and the error was
-load-bearing — it is why #448 was rebuilt at all rather than updated in place. (That the
+load-bearing — it is why PR A was rebuilt at all rather than updated in place. (That the
 rebuild then had to become a *new* PR is a separate constraint, the force-push denial;
 see the two-endings table below. The two explanations stack, they do not compete.)
 
@@ -31,8 +31,7 @@ changes.
 That last step is a deduction, not an observation: once `main`'s tip is an ancestor of the
 child, the 3-dot diff *is* the 2-dot diff, by definition.
 
-**The mechanics are confirmed in production**, by `murty/alt-112-inventory-account-scoping`,
-which merged `main` forward as `533c391` on the way to #561:
+**The mechanics are confirmed in production**, by a branch that merged `main` forward as `533c391` on the way to PR B:
 
 | | |
 | --- | --- |
@@ -65,7 +64,7 @@ unavailable* already names. Where the divergence does not overlap, the merge is 
 the collapse is complete — a clean merge here is not suspicious.
 
 **Afterwards, check the rendered list, not the count.** Re-run
-`gh pr diff <n> --name-only` and confirm it equals the branch's own files. #561 went 36 →
+`gh pr diff <n> --name-only` and confirm it equals the branch's own files. PR B went 36 →
 36 on a correct merge-forward, so "the count dropped" is not the invariant.
 
 **What an agent can actually run today.** Local `git merge` is denied by
@@ -74,11 +73,11 @@ repos/:owner/:repo/pulls/<n>/update-branch` is not, and it performs the same mer
 same merge-base move — see § *If a branch genuinely must be updated*. **But it only
 completes a clean merge**: GitHub will not resolve conflicts server-side, so in the
 conflicting case above there is no *in-place* update path. The recreate recipe below
-still applies — that is what #448 → #451 did — so the fallback is a rebuild, not a dead
+still applies — that is what PR A → PR C did — so the fallback is a rebuild, not a dead
 end. Lifting the local denial is tracked separately (T-27).
 
 `update-branch` is a push, but since 2026-08-26 it **no longer costs a fresh approval**.
-`require_last_push_approval` is off on `Protect main — review`
+`require_last_push_approval` is off on the main-branch ruleset
 (the project's decision log),
 so a push does not invalidate an existing approval. What still gates the merge is
 `require_code_owner_review` on owned paths and `required_review_thread_resolution`
@@ -86,8 +85,8 @@ everywhere — a push that adds a new unresolved thread, or that touches an owne
 for the first time, can still block.
 
 Historical, and the reason the rule was removed: while it was on, every merged PR by an
-author with no ruleset bypass whose approval preceded the last commit — #536, #552, #553,
-#554, #555 — needed a second approval after the push, with no counterexample in the repo.
+author with no ruleset bypass whose approval preceded the last commit — PR D, PR E, PR F,
+PR G, PR H — needed a second approval after the push, with no counterexample in the repo.
 Since 2026-08-26 that is no longer the case, so **do not plan for re-approval** after an
 `update-branch`, merge-forward or follow-up commit; plan for an unresolved thread or a
 newly-touched owned path instead.
@@ -116,8 +115,8 @@ Two ways to keep a child from going stale in the first place, in preference orde
 
    In *this* environment the first ending cannot run: `Bash(git push --force:*)` is in
    the permission layer's **deny** list, and that prefix covers `--force-with-lease`.
-   So the second ending is the one available here, and it is why #448 was closed in
-   favour of a new PR (#451) rather than force-updated in place. Naming the supersession
+   So the second ending is the one available here, and it is why PR A was closed in
+   favour of a new PR (PR C) rather than force-updated in place. Naming the supersession
    in the new PR's body is what keeps the closed one from reading as abandoned work.
 
 ## Running siblings in parallel: file overlap is a signal to sequence
@@ -131,7 +130,7 @@ branches off the same `main` editing the same file do *not* automatically
 conflict — git merges non-overlapping hunks fine. The risk is *overlapping*
 edits, which you cannot see in a file list and will not discover until the second
 PR is open. The recovery is **merge `main` forward into the second branch and resolve
-the conflict there** (§ *A stacked branch does not survive its parent merging*) — #561
+the conflict there** (§ *A stacked branch does not survive its parent merging*) — PR B
 did exactly this. Re-creating the file by hand on a third branch is the fallback for
 when that resolution is too risky, not the first move; an earlier revision of this
 paragraph said otherwise, on the same wrong premise corrected above.
@@ -143,7 +142,7 @@ this order:
    wall-clock and nothing else — both PRs stay coherent. This is usually right.
 2. **Run them in parallel anyway** if the edits are in clearly different parts of
    the file, and resolve any conflict by merging `main` forward into the second
-   branch — #561 did exactly that, resolving a four-file overlap in place.
+   branch — PR B did exactly that, resolving a four-file overlap in place.
    Rebuilding the branch is the fallback for a resolution too risky to trust, not
    the expected cost.
 3. **Move the shared file's edits into one PR** only when they are small and
@@ -151,9 +150,9 @@ this order:
    buys parallelism by spending reviewability, so spend it deliberately.
 
 T-28 took (3) and paid for it: three PRs off one `main`, with every
-`env-vars.md` edit pulled into `#525` even though half described the
-`serving-crawler` that `#526` deploys. The merges were clean — `#525` landed and
-`#526` needed no rebase and no update, then the same for `#527` — but `#525`'s
+environment-variable doc edit pulled into PR I even though half described the
+service that PR J deploys. The merges were clean — PR I landed and
+PR J needed no rebase and no update, then the same for PR K — but PR I's
 reviewer saw configuration for a service that did not exist yet. Worth it for
 three PRs of mechanical config rows; not worth it for logic.
 
@@ -177,8 +176,8 @@ silent and wrong. State the required order in the PR body when one exists.
 conflicted.** A hand-merged derived value is **wrong but green**: the gate then
 compares a hash nobody derived against content nobody regenerated. The conflict is
 the *safe* case, because it forces you to look. The dangerous case is the silent
-one — on #613 `tests/contracts/golden_hashes.json` conflicted while
-`the contract seta generated registry` **auto-merged**, leaving a hash map
+one — on PR L one generated hash file conflicted while
+a second generated registry **auto-merged**, leaving a hash map
 assembled from two branches and matching neither's source, with no marker to
 prompt anyone. `git checkout --theirs` does not even apply to a file that never
 conflicted.
@@ -187,16 +186,15 @@ So take the list from the merge, not from the conflicts:
 
 ```bash
 git diff --name-only ORIG_HEAD..            # everything the merge moved
-python3 a service package/tools/generate_runtime_registry.py
-python3 tests/contracts/check_contracts.py --update
+<regenerate each generated file the merge moved>
 ```
 
 Then **prove it**, which is what separates "regenerated" from "regenerated and
 shown to agree with source":
 
 ```bash
-python3 a service package/tools/generate_runtime_registry.py --check   # no drift
-python3 tests/contracts/check_contracts.py                           # 10/10 unchanged
+<each generator's --check>                  # no drift
+<the contract check>                        # unchanged
 ```
 
 Note the generator resolves paths from its own location rather than the cwd, so
@@ -208,14 +206,14 @@ N branches sharing a generated file are N−1 whatever the order — every branc
 after the first pays one. What varies is how often *each* branch pays: merge
 `main` after every upstream landing and you regenerate per landing, wait until you
 are next and you regenerate once. Four PRs shared
-`a generated registry`/`golden_hashes.json` over two days, and the branches that
+two generated files over two days, and the branches that
 held off paid once each.
 
 **Order by conflict complexity, not by size.** Put the branches whose conflicts are
 *source-level* last, because that is judgment you do not want to repeat, and a
-regeneration is not. In that same set #604 went last because its `tag.js` and
-`tag.dom.test.js` overlap was the only conflict needing a decision rather than a
-command; #611 went first because it was clean and already approved, not because it
+regeneration is not. In that same set PR M went last because its overlap in a source file
+and its test was the only conflict needing a decision rather than a
+command; PR N went first because it was clean and already approved, not because it
 was smallest.
 
 ## Being behind `main` is not what blocks you
@@ -281,7 +279,7 @@ gh api repos/:owner/:repo/rules/branches/main \
 `dismiss_stale_reviews_on_push` is in that list because it is the *other* way a
 push can cost an approval: `require_last_push_approval` being off is not
 sufficient on its own if stale reviews are being dismissed. Both are `false`
-today, which is why #657 kept the reviewer's approval across a later push.
+today, which is why PR O kept the reviewer's approval across a later push.
 
 Historical note, since it is cited elsewhere in this file: while the rule was on, an
 approval predating the last push did **not** satisfy it — confirmed on five PRs
@@ -298,7 +296,7 @@ and the project's decision log.
 
 Two entry conditions to note, because § *A stacked branch does not survive its parent
 merging* now routes readers here. First, that section's case is a **rendering** problem,
-not a blocking one — #448 was correct content on green CI — so it does not have to fail
+not a blocking one — PR A was correct content on green CI — so it does not have to fail
 the `mergeStateStatus` check above to belong here. Second, for a stacked child this is
 the primary agent-runnable remedy rather than a rarity; the "prefer the partition"
 advice applies to a branch that is merely *behind*, not to one rendering its parent's

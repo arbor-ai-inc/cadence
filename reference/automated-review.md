@@ -98,12 +98,12 @@ a blocking-review setting makes the reviewer's *Request changes* a merge gate, a
 `required_review_thread_resolution` in the ruleset means unresolved threads block merge
 the way a human's do. A reply that declines a finding leaves both in place.
 
-1. `pr_review_state.py --pr <n>` renders the verdict as `AT HEAD` (`--json` gives
+1. `tools/review_state.py --pr <n>` renders the verdict as `AT HEAD` (`--json` gives
    the `review_landed_at_head` field a monitor dispatches on).
 2. Every finding — inline **and in the review body** — is fixed or answered. Neither
    surface is visible in the review state, and neither is counted by the other; use the
    enumeration commands in § *Working With Automated Reviewers*. A finding whose line
-   falls outside the diff cannot be posted inline and arrives in the body instead: #604
+   falls outside the diff cannot be posted inline and arrives in the body instead: PR M
    reported `unresolved threads: 0` with a Major finding open in prose.
 3. **Any active reviewer block is cleared.** It lifts its own *Request changes* once
    its comments are resolved and no pre-merge check is failing, so a re-review at head
@@ -209,7 +209,7 @@ report it blocked merely because the wait was long.
 **After `auto_pause_after_reviewed_commits: 2` fires, further commits are simply not
 reviewed** — and the row still reads `pass`, so an agent that has spent its two runs
 can correctly conclude more commits cost nothing, which is exactly when the unreviewed
-one lands. #620 and #627 each sat auto-paused behind a green row for ~12 hours,
+one lands. PR P and PR Q each sat auto-paused behind a green row for ~12 hours,
 unreviewed at head. The commit pushed after the pause is the one most likely to reach a
 human unreviewed, and batching is what keeps the reviewed set and the merged set the
 same set. The quota argument is the obvious one and the weaker one.
@@ -239,7 +239,7 @@ authority on that list; lockfiles, the project's exploratory trees
 (`docs/engineering/project-conventions.md`), generated artifacts, and spec-review
 rounds are among them, so a spec-review-artifacts-only PR legitimately gets
 nothing; or a **base branch** the `base_branches` regex does not match — what
-skipped #377 before `.*` was set, and what a stacked PR would hit if that pattern
+skipped PR R before `.*` was set, and what a stacked PR would hit if that pattern
 were narrowed again. A PR with **at least one** included path should still be
 expected to review. A `Review skipped: …` row names its own cause, measured for
 the draft and title-keyword cases; whether a `base_branches` miss renders as that
@@ -309,7 +309,7 @@ different points in the same night. Re-read the notice; § *Requesting the re-re
 where that rule lives.
 
 **A reply that starts no review does not suppress the next ask.** It is often prose
-analysis carrying a real finding, and `pr_review_state.py` correctly still reports `ASK`.
+analysis carrying a real finding, and `tools/review_state.py` correctly still reports `ASK`.
 Retries two minutes and twenty-six minutes later both started reviews — consistent with
 [`../code-review.md`](./code-review.md)'s *"a refused attempt is free"*. A check row
 reading `Review rate limited` is a different thing: that is a genuine refusal, so honour

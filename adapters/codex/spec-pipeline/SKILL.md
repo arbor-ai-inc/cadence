@@ -83,14 +83,14 @@ Two gates: **Gate 1 (product)** reviews `<[paths].specs>/<slug>/product.md`; **G
    **design PR** (`spec(design): <slug>` with `design.md` + Gate 2 rounds +
    `carried-advisories.md` + ack) and **STOP** for author review + merge.
    **The author's PR approval is the acknowledgment — do not send a separate
-   `slack_ask.py` ack request**; the brief is read on the PR. File the
+   ack request**; the brief is read on the PR. File the
    **decomposition** to the tracker after the design
    PR merges — different from the advisory follow-up issues in step 3, which are filed
    *before* the gate's PR so their ids land in `carried-advisories.md`. Only the task
    graph waits for the merge. See
    the [PR Gates] and [Acknowledgment] sections of the canonical doc.
 5. Circuit breaker: if blockers do not strictly decrease over 3 consecutive
-   rounds, escalate all open questions to author via `slack_ask.py ask`.
+   rounds, escalate all open questions to author via `.cadence/tools/ask.py`.
 
 Compute hashes via `python3 .cadence/tools/spec_hash.py` before each review
 invocation (`spec` mode on `product.md` / `design.md`). Invoke

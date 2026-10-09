@@ -467,7 +467,7 @@ class TestEvidence(FanoutCase):
                 "--if-silent", "nothing ships; the tree waits")
         self.ok("ledger", ISSUE)
         text = (self.repo / STATE_DIR / "fanout" / "xx-999" / "LEDGER.md").read_text()
-        # Shape A: the brief a human decides from (`human-brief`, PR #624).
+        # Shape A: the brief a human decides from (`human-brief`, PR X).
         self.assertIn("**DECISION:**", text)
         self.assertIn("**WHY YOU:**", text)
         self.assertIn("| Option | In plain English | What you would notice |", text)
@@ -712,7 +712,7 @@ class TestMustStop(FanoutCase):
         git("add", "-A", cwd=path)
 
     def test_check_scope_is_a_noop_off_a_fan_branch(self):
-        self.stage_in(self.repo, "api/contracts/event-schema.yaml")
+        self.stage_in(self.repo, "api/contracts/schema.yaml")
         code, _out, _err = self.run_cli("check-scope")
         self.assertEqual(code, 0, "must not police ordinary branches")
 
@@ -720,10 +720,10 @@ class TestMustStop(FanoutCase):
         self.init()
         self.fork_two()
         leaf = self.repo / STATE_DIR / "worktrees" / "xx-999" / "inline"
-        self.stage_in(leaf, "api/contracts/event-schema.yaml")
+        self.stage_in(leaf, "api/contracts/schema.yaml")
         code, _out, err = self.run_cli("check-scope", cwd=leaf)
         self.assertEqual(code, 5)
-        self.assertIn("api/contracts/event-schema.yaml", err)
+        self.assertIn("api/contracts/schema.yaml", err)
         self.assertIn("a durable published contract", err)
         self.assertIn("abandon", err)
 
@@ -748,7 +748,7 @@ class TestMustStop(FanoutCase):
 
     def test_fork_refuses_when_the_trunk_already_crossed_the_line(self):
         self.init()
-        target = self.repo / "api" / "contracts" / "event-schema.yaml"
+        target = self.repo / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\n", encoding="utf-8")
         git("add", "-A", cwd=self.repo)
@@ -789,30 +789,30 @@ class TestMustStopBypasses(FanoutCase):
         self.init()
         self.fork_two()
         leaf = self.repo / STATE_DIR / "worktrees" / "xx-999" / "inline"
-        target = leaf / "api" / "contracts" / "event-schema.yaml"
+        target = leaf / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\nx: 2\ny: 3\nz: 4\nw: 5\n", encoding="utf-8")
         git("add", "-A", cwd=leaf)
         git("commit", "-m", "add a contract", cwd=leaf)
 
-        git("mv", "api/contracts/event-schema.yaml", "moved.yaml", cwd=leaf)
+        git("mv", "api/contracts/schema.yaml", "moved.yaml", cwd=leaf)
         code, _out, err = self.run_cli("check-scope", cwd=leaf)
         self.assertEqual(code, 5, "a rename out of the boundary must still be refused")
-        self.assertIn("api/contracts/event-schema.yaml", err)
+        self.assertIn("api/contracts/schema.yaml", err)
 
     def test_deleting_a_protected_file_is_refused(self):
         self.init()
         self.fork_two()
         leaf = self.repo / STATE_DIR / "worktrees" / "xx-999" / "inline"
-        target = leaf / "api" / "contracts" / "event-schema.yaml"
+        target = leaf / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\n", encoding="utf-8")
         git("add", "-A", cwd=leaf)
         git("commit", "-m", "add a contract", cwd=leaf)
-        git("rm", "-q", "api/contracts/event-schema.yaml", cwd=leaf)
+        git("rm", "-q", "api/contracts/schema.yaml", cwd=leaf)
         code, _out, err = self.run_cli("check-scope", cwd=leaf)
         self.assertEqual(code, 5)
-        self.assertIn("api/contracts/event-schema.yaml", err)
+        self.assertIn("api/contracts/schema.yaml", err)
 
     def test_every_declared_must_stop_entry_is_actually_refused(self):
         """Covers the whole boundary, not the three entries someone thought of.
@@ -890,7 +890,7 @@ class TestGateBypasses(FanoutCase):
         self.fork_two()
         leaf = self.repo / STATE_DIR / "worktrees" / "xx-999" / "inline"
         git("checkout", "--detach", cwd=leaf)
-        target = leaf / "api" / "contracts" / "event-schema.yaml"
+        target = leaf / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\n", encoding="utf-8")
         git("add", "-A", cwd=leaf)
@@ -911,7 +911,7 @@ class TestGateBypasses(FanoutCase):
         git("worktree", "move", f"{STATE_DIR}/worktrees/xx-999/inline", str(moved),
             cwd=self.repo)
         git("checkout", "--detach", cwd=moved)
-        target = moved / "api" / "contracts" / "event-schema.yaml"
+        target = moved / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\n", encoding="utf-8")
         git("add", "-A", cwd=moved)
@@ -921,7 +921,7 @@ class TestGateBypasses(FanoutCase):
         code, _out, err = self.run_cli("check-scope", cwd=moved)
         self.assertEqual(code, 5, "move + detach must not bypass the boundary")
         self.assertIn("XX-999", err)
-        self.assertIn("api/contracts/event-schema.yaml", err)
+        self.assertIn("api/contracts/schema.yaml", err)
 
     def test_removing_the_marker_after_move_and_detach_still_enforces(self):
         """Codex round 3 BLOCKER: the marker is a setting, and settings are editable.
@@ -940,7 +940,7 @@ class TestGateBypasses(FanoutCase):
         subprocess.run(["git", "config", "--worktree", "--unset", "fanout.issue"],
                        cwd=str(moved), capture_output=True, text=True, check=False,
                        env=GIT_ENV)
-        target = moved / "api" / "contracts" / "event-schema.yaml"
+        target = moved / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\n", encoding="utf-8")
         git("add", "-A", cwd=moved)
@@ -955,7 +955,7 @@ class TestGateBypasses(FanoutCase):
         self.fork_two()
         other = Path(self._tmp.name).resolve() / "unrelated"
         git("worktree", "add", "-b", "feature/x", str(other), cwd=self.repo)
-        target = other / "api" / "contracts" / "event-schema.yaml"
+        target = other / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\n", encoding="utf-8")
         git("add", "-A", cwd=other)
@@ -969,7 +969,7 @@ class TestGateBypasses(FanoutCase):
     # added because a real bypass was found, hardening with no regression test.
 
     def stage_contract(self, path):
-        target = Path(path) / "api" / "contracts" / "event-schema.yaml"
+        target = Path(path) / "api" / "contracts" / "schema.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("v: 1\n", encoding="utf-8")
         git("add", "-A", cwd=path)
@@ -989,7 +989,7 @@ class TestGateBypasses(FanoutCase):
                          "precondition: this worktree must carry no marker")
         code, _out, err = self.run_cli("check-scope", cwd=outside)
         self.assertEqual(code, 5, "the fan/ branch prefix alone must still enforce")
-        self.assertIn("event-schema.yaml", err)
+        self.assertIn("schema.yaml", err)
 
     def test_the_worktree_location_alone_is_enough(self):
         """Only `in_fan_worktree` fires: inside the dir, non-fan branch, unmarked."""
@@ -1001,7 +1001,7 @@ class TestGateBypasses(FanoutCase):
         self.assertFalse(branch.startswith("fan/"), "precondition: not a fan/ branch")
         code, _out, err = self.run_cli("check-scope", cwd=inside)
         self.assertEqual(code, 5, "living under .claude/worktrees must still enforce")
-        self.assertIn("event-schema.yaml", err)
+        self.assertIn("schema.yaml", err)
 
     def test_the_marker_alone_is_enough(self):
         """Only `marked` fires: outside the dir, detached, unregistered, marked."""
@@ -1016,7 +1016,7 @@ class TestGateBypasses(FanoutCase):
         self.assertNotIn(f"{STATE_DIR}/worktrees", str(outside))
         code, _out, err = self.run_cli("check-scope", cwd=outside)
         self.assertEqual(code, 5, "the worktree marker alone must still enforce")
-        self.assertIn("event-schema.yaml", err)
+        self.assertIn("schema.yaml", err)
 
     def test_exact_file_entries_do_not_prefix_match(self):
         """`api/models.py` must not also refuse `models.py.bak`."""
