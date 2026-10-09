@@ -87,9 +87,10 @@ findings. Counts, file lists, quoted rules and named identifiers in a ticket are
 wrong often enough that eleven tickets built on a bad one before the rule
 existed.
 
-### Decision fan-out
+### Decision fan-out (opt-in)
 
-When an autonomous run reaches a decision with more than one defensible answer,
+**Off unless you set `[fanout].enabled = true`**; until then a one-way decision is
+asked. With it on, when a run reaches a decision with more than one defensible answer,
 it builds **every option in its own git worktree**, records the trade-offs, and
 keeps going — instead of stalling on a question nobody is awake to answer.
 
