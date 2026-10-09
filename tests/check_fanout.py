@@ -66,8 +66,8 @@ def must_stop_entries():
 
 
 def cadence_toml() -> str:
-    """The fixture config each throwaway repo gets."""
-    lines = []
+    """The fixture config each throwaway repo gets. Fan-out is opt-in, so on."""
+    lines = ["[fanout]", "enabled = true", ""]
     for path, reason in MUST_STOP_FIXTURE:
         lines.append("[[must_stop]]")
         lines.append(f'path = "{path}"')
@@ -1296,6 +1296,39 @@ class TestHandoff(FanoutCase):
         self.assertIn("you would notice:", out)
         self.assertIn("--choose d1=inline", out)
         self.assertNotIn("|---|", out)  # chat transports do not render markdown tables
+
+
+class TestFanoutSwitch(FanoutCase):
+    """Fan-out is off unless the project turns it on."""
+
+    def write_config(self, enabled_line):
+        body = cadence_toml().replace("enabled = true", enabled_line)
+        (self.repo / "cadence.toml").write_text(body, encoding="utf-8")
+
+    def test_init_is_refused_when_the_switch_is_absent(self):
+        self.write_config("")
+        code, _out, err = self.run_cli("init", ISSUE)
+        self.assertEqual(code, 3, err)
+        self.assertIn("fan-out is off", err)
+        self.assertFalse((self.repo / STATE_DIR / "fanout" / "xx-999").exists())
+
+    def test_fork_is_refused_when_switched_off_after_init(self):
+        self.init()
+        self.write_config("enabled = false")
+        code, _out, err = self.run_cli(
+            "fork", ISSUE, "--decision", "Q", "--why-you", "the tradeoff is yours",
+            "--source", "app.py:1",
+            "--option", "inline:dict:no dependency", "--option", "redis:shared:survives restart",
+        )
+        self.assertEqual(code, 3, err)
+        self.assertIn("fan-out is off", err)
+        self.assertEqual(self.worktree_paths(), [str(self.repo)])
+
+    def test_check_scope_still_runs_when_off(self):
+        """The commit gate is not fan-out; turning fan-out off must not disable it."""
+        self.write_config("enabled = false")
+        code, _out, err = self.run_cli("check-scope")
+        self.assertEqual(code, 0, err)
 
 
 class TestVendoredSubmodule(FanoutCase):
