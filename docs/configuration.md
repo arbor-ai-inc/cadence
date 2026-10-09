@@ -149,6 +149,30 @@ then do the part that makes it real: delete every principle you would not
 actually enforce, and fill in the `In your codebase` line for each survivor. Ten
 principles you mean beat twenty-six you inherited.
 
+### `[paths].overlays` — project rules on top of a workflow
+
+```toml
+[paths]
+overlays = "docs/agent-overlays"
+```
+
+A directory of per-workflow addenda, `<overlays>/<name>.md`: `code-review.md`,
+`execute-issue.md` and so on. Unset by default.
+
+When it is set, every wrapper `wrappers.py` generates ends by telling the agent
+to read the matching overlay after the canonical doc, if one exists. That is
+where a project's own rules go: data that must never reach a log, a deploy step
+your PRs need, an extra BLOCKER class for your domain. **An overlay adds; it
+never removes or relaxes a cadence rule.** If a cadence rule is wrong for
+everyone, that is an upstream issue, not an overlay.
+
+Keep overlays to project facts. An overlay that restates a cadence workflow is a
+second copy of it, and it will drift.
+
+Overlays are read through generated wrappers, so they apply to the
+[submodule install](setup.md#or-vendor-it-as-a-git-submodule-with-no-plugin).
+Regenerate the wrappers after setting or changing this key.
+
 ## Models
 
 **Cadence pins no model and cannot set one.** This is a harness limitation, and

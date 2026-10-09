@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Part of cadence; init_project.py copies it into a project. Safe to commit.
+# Thin alias for `./.cadence/cadence check-scope`, kept so existing hook
+# configs keep working.
+set -euo pipefail
+exec "$(dirname "$0")/cadence" check-scope "$@"

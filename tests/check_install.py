@@ -231,6 +231,11 @@ def main() -> int:
         check("the shim fails loudly with no plugin", r.returncode != 0, f"got {r.returncode}")
         check("and says how to fix it", "install" in r.stderr.lower())
 
+        # -- vendored: cadence as a git submodule at .cadence/ ---------------
+        # No plugin at all. The dispatcher must resolve the copy it sits in,
+        # and the generated wrappers must point at files that exist.
+        vendored_first_hour(tmp, plugin, check)
+
     finally:
         if args.keep:
             print(f"\ntemp dir kept: {tmp}")
@@ -245,6 +250,106 @@ def main() -> int:
         return 1
     print(f"check_install: an adopter's first hour works (plugin {manifest['version']})")
     return 0
+
+
+def vendored_first_hour(tmp: Path, plugin: Path, check) -> None:
+    """A project that vendors cadence as a submodule, with no plugin installed."""
+    src = tmp / "vendor-src"
+    shutil.copytree(plugin, src, ignore=shutil.ignore_patterns(".git"))
+    git("init", "--quiet", "-b", "main", cwd=src)
+    git("-c", "user.email=t@example.com", "-c", "user.name=T", "add", "-A", cwd=src)
+    git("-c", "user.email=t@example.com", "-c", "user.name=T", "commit", "--quiet", "-m", "v", cwd=src)
+
+    proj = tmp / "vproj"
+    proj.mkdir()
+    git("init", "--quiet", "-b", "main", cwd=proj)
+    git("config", "user.email", "t@example.com", cwd=proj)
+    git("config", "user.name", "T", cwd=proj)
+    git("-c", "protocol.file.allow=always", "submodule", "add", "--quiet", str(src), ".cadence", cwd=proj)
+    git("commit", "--quiet", "-m", "vendor cadence", cwd=proj)
+
+    # An empty HOME, so the plugin cache cannot be what makes this pass.
+    env = {"HOME": str(tmp / "empty-home"), "CADENCE_PLUGIN_ROOT": ""}
+    disp = proj / ".cadence" / "cadence"
+    r = run([str(disp), "root"], proj, env)
+    check("vendored: the dispatcher resolves the copy it sits in",
+          Path(r.stdout.strip() or "/nonexistent").resolve() == (proj / ".cadence").resolve(),
+          f"resolved {r.stdout.strip()!r} {r.stderr.strip()[:120]}")
+    r = run([str(disp), "config"], proj, env)
+    check("vendored: `cadence config` runs", r.returncode == 0, r.stderr.strip()[:160])
+
+    p = run(["python3", ".cadence/tools/init_project.py", "--retros", "--hook"], proj, env)
+    check("vendored: init runs", p.returncode == 0, p.stderr.strip()[:200])
+    check("vendored: init writes cadence.toml", (proj / "cadence.toml").exists())
+    check("vendored: init leaves the submodule clean",
+          ".cadence" not in run(["git", "status", "--porcelain"], proj).stdout)
+
+    (proj / "cadence.toml").write_text(
+        (proj / "cadence.toml").read_text() + '\n[paths]\noverlays = "docs/overlays"\n'
+        if "[paths]" not in (proj / "cadence.toml").read_text()
+        else (proj / "cadence.toml").read_text().replace("[paths]\n", '[paths]\noverlays = "docs/overlays"\n', 1)
+    )
+    wrap = ["python3", ".cadence/tools/wrappers.py", "--targets", "claude,codex"]
+    p = run(wrap, proj, env)
+    check("vendored: wrappers generate", p.returncode == 0, p.stderr.strip()[:200])
+
+    claude = proj / ".claude" / "skills" / "code-review" / "SKILL.md"
+    codex = proj / ".codex" / "skills" / "code-review" / "SKILL.md"
+    check("vendored: a Claude wrapper exists, unprefixed", claude.exists())
+    check("vendored: a Codex wrapper exists", codex.exists())
+    check("vendored: agents are generated", (proj / ".claude" / "agents" / "code-reviewer.md").exists())
+    check("vendored: no `init` wrapper to shadow the built-in /init",
+          not (proj / ".claude" / "skills" / "init").exists())
+    import re
+    for f in sorted([*(proj / ".claude").rglob("*.md"), *(proj / ".codex").rglob("*.md")]):
+        text = f.read_text()
+        rel = f.relative_to(proj).as_posix()
+        # The trailing slash: skill-anatomy names the variable in prose, which
+        # is fine. A PATH through it resolves to nothing outside a plugin.
+        check(f"vendored: {rel} has no plugin-root path", "${CLAUDE_PLUGIN_ROOT}/" not in text)
+        check(f"vendored: {rel} has no /cadence: prefix", "/cadence:" not in text)
+        check(f"vendored: {rel} names its overlay", "docs/overlays/" in text)
+        for target in set(re.findall(r"\.cadence/[\w./-]+[\w/]", text)):
+            check(f"vendored: {rel} points at {target}, which exists",
+                  (proj / target.split("#")[0]).exists())
+    check("vendored: Codex wrappers drop allowed-tools", "allowed-tools:" not in codex.read_text())
+
+    p = run([*wrap, "--check"], proj, env)
+    check("vendored: --check passes when fresh", p.returncode == 0, p.stderr.strip()[:160])
+    claude.write_text(claude.read_text() + "hand edit\n")
+    p = run([*wrap, "--check"], proj, env)
+    check("vendored: --check fails on a hand edit", p.returncode == 1)
+    run(wrap, proj, env)
+
+    orphan = proj / ".claude" / "skills" / "gone" / "SKILL.md"
+    orphan.parent.mkdir(parents=True)
+    orphan.write_text("---\nname: gone\n---\n<!-- GENERATED by cadence from .cadence/skills/gone/SKILL.md.\n-->\n")
+    p = run([*wrap, "--check"], proj, env)
+    check("vendored: --check fails on an orphaned wrapper", p.returncode == 1)
+    run(wrap, proj, env)
+    check("vendored: regenerating removes the orphan", not orphan.exists())
+
+    # A project file that merely MENTIONS the marker phrase is still its own.
+    mention = proj / ".claude" / "agents" / "notes.md"
+    mention.write_text("---\nname: notes\n---\nOur wrappers say GENERATED by cadence from .cadence/.\n")
+    run(wrap, proj, env)
+    check("vendored: a project file that mentions the marker is not deleted", mention.exists())
+    mention.unlink(missing_ok=True)
+
+    # Dropping a target removes that target's wrappers rather than stranding them.
+    run(["python3", ".cadence/tools/wrappers.py", "--targets", "claude"], proj, env)
+    check("vendored: dropping codex removes the codex wrappers", not codex.exists())
+    run(wrap, proj, env)
+
+    own = proj / ".codex" / "skills" / "retro" / "SKILL.md"
+    own.write_text("---\nname: retro\n---\nthe project's own\n")
+    p = run(wrap, proj, env)
+    check("vendored: a project's own file at a wrapper path fails the run", p.returncode == 1)
+    check("vendored: ...and is never overwritten", "the project's own" in own.read_text())
+    own.unlink()
+
+    p = run(["python3", str(plugin / "tools" / "wrappers.py")], proj, env)
+    check("vendored: wrappers refuse to run from a copy that is not .cadence/", p.returncode == 1)
 
 
 if __name__ == "__main__":
