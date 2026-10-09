@@ -185,14 +185,20 @@ there falls back to cadence's copy.
 ```toml
 [git]
 branch = "{owner}/{issue_lower}-{slug}"
-commit_style = "conventional"          # or "issue-prefix" (the default)
+commit_style = "conventional"          # or "issue-prefix", or "imperative"
 pr_title = "{summary} ({issue})"
 ```
 
-Workflows name branches, write commit messages and title PRs from these. The
-defaults are `{issue_lower}`, `issue-prefix` and `{issue}: {summary}`. With
-`conventional`, `{summary}` in the PR title is itself a Conventional Commit
-subject (`feat(api): add the export endpoint`).
+Workflows name branches, write commit messages and title PRs from these.
+Placeholders: `{issue}` as written, `{issue_lower}`, `{slug}` (a few words from the
+title), `{owner}` (who or which agent is doing the work), `{summary}`. A misspelled
+one fails the load. With `conventional`, `{summary}` is itself a Conventional Commit
+subject (`feat(api): add the export endpoint`), so set `pr_title` too, or the
+default title reads `XX-1: feat(api): …`.
+
+Unset, each workflow keeps its own default: execute-issue uses the lowercased issue
+id, issue-prefixed commits and `{issue}: {summary}`; git-pr-workflow uses
+`<owner>/<ticket-or-topic>` and plain imperative commits.
 
 ### `[fanout].enabled` — build options instead of asking
 
@@ -233,9 +239,9 @@ recommended = "opus"
 ```
 
 A workflow reads it, compares it to the model it is actually running on, and
-**stops if they differ** — naming both, and how to switch. A workflow with its own
-entry in `[models.pins]` checks against that instead, and checks again each time it
-resumes after stopping to ask you, since a skill's pin lasts one turn. It enforces nothing
+**stops if they differ** — naming both, and how to switch. The spec workflows
+(`spec-pipeline`, `review-spec`, `draft-plan`) check their own `[models.pins]` entry
+first, then this. `execute-issue` and `code-review` check only their own pin. It enforces nothing
 about which model runs. What it enforces is that you **find out**.
 
 The defect this fixes is not "the wrong model ran". It is "the wrong model ran
@@ -243,17 +249,19 @@ and nothing said so".
 
 Leave it unset if you do not care which model runs a workflow.
 
-### `[models.pins]` — pins in generated wrappers
-
-Only for a project that vendors cadence (see [setup](setup.md)). `tools/wrappers.py`
-writes each pin as `model:` into that skill's or agent's Claude wrapper:
+### `[models.pins]` — a model per workflow or agent
 
 ```toml
 [models.pins]
-product-spec-reviewer = "fable"
-eng-design-reviewer = "fable"
-code-review = "opus"
+product-spec-reviewer = "opus"
+eng-design-reviewer = "opus"
+execute-issue = "sonnet"
 ```
+
+In a project that vendors cadence (see [setup](setup.md)), `tools/wrappers.py`
+writes each pin as `model:` into that skill's or agent's Claude wrapper. In any
+install, a pinned workflow running in Claude Code compares the session model with its
+pin, on start and on every resume, and stops if they differ.
 
 A pin on an **agent** is the durable kind: it holds for the subagent's whole run.
 A pin on a **skill** covers the turn that invoked it, as above. A name that is no

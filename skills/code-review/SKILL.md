@@ -6,7 +6,7 @@ description: >
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Task
 ---
 
-**Check the model first, and again on every resume after a stop.** Read `model_pins["code-review"]` from `python3 ${CLAUDE_PLUGIN_ROOT}/tools/cadence_config.py --json`; if it is set and you are not running on it, say so and stop — name both models and how to switch (`/model <name>`). Continue only if the author says to. Unset: no check.
+**In Claude Code, check the model first, and again on every resume after a stop** (Codex: skip). Read `model_pins["code-review"]` from `python3 ${CLAUDE_PLUGIN_ROOT}/tools/cadence_config.py --json`; if it is set and you are not running on it, say so and stop — name both models and how to switch (`/model <name>`). Continue only if the author says to. Unset: no check.
 
 Reviewer is `[review].provider`: `codex` (`codex exec`), `claude` (`claude -p`), `subagent` (Claude Code only — needs Task), `coderabbit`, or `none`. **Pick a different agent from the one that wrote the code**; that is the whole point.
 

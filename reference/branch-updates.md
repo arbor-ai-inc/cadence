@@ -67,15 +67,15 @@ the collapse is complete — a clean merge here is not suspicious.
 `gh pr diff <n> --name-only` and confirm it equals the branch's own files. PR B went 36 →
 36 on a correct merge-forward, so "the count dropped" is not the invariant.
 
-**What an agent can actually run today.** Local `git merge` is denied by
-`.claude/settings.json` — a guard, not a sandbox: branch protection on `main` is the
-control that holds. The server-side `gh api -X PUT
+**What an agent can actually run** where the permission layer denies local `git
+merge` (as the source project's did) — a guard, not a sandbox; branch protection on
+`main`, where the repo has it, is the control that holds. The server-side `gh api -X PUT
 repos/:owner/:repo/pulls/<n>/update-branch` is not, and it performs the same merge and the
 same merge-base move — see § *If a branch genuinely must be updated*. **But it only
 completes a clean merge**: GitHub will not resolve conflicts server-side, so in the
 conflicting case above there is no *in-place* update path. The recreate recipe below
 still applies — that is what PR A → PR C did — so the fallback is a rebuild, not a dead
-end. Lifting the local denial is tracked separately (T-27).
+end.
 
 `update-branch` is a push. Whether a push costs an existing approval depends on the
 ruleset (`require_last_push_approval`, `dismiss_stale_reviews_on_push`) — check it,

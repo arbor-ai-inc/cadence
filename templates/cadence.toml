@@ -33,14 +33,18 @@ issue_key = "^([A-Z]{2,5}-[0-9]+)$"
 
 
 [git]
-# How branches, commits and PR titles are named. Placeholders: {issue} (as
-# written), {issue_lower}, {slug} (a few words from the title), {owner} (who or
-# which agent is doing the work), {summary}.
-branch = "{issue_lower}"
+# How branches, commits and PR titles are named. Unset, each workflow keeps its
+# own default: execute-issue uses the lowercased issue id, issue-prefixed
+# commits and an "{issue}: {summary}" title; git-pr-workflow uses
+# <owner>/<ticket-or-topic> and plain imperative commits.
+# Placeholders: {issue} (as written), {issue_lower}, {slug} (a few words from the
+# title), {owner} (who or which agent is doing the work), {summary}.
+# branch = "{owner}/{issue_lower}-{slug}"
 #   issue-prefix — "XX-33: add the export endpoint"
 #   conventional — Conventional Commits, "feat(api): add the export endpoint"
-commit_style = "issue-prefix"
-pr_title = "{issue}: {summary}"
+#   imperative   — "Add the export endpoint"
+# commit_style = "conventional"
+# pr_title = "{summary} ({issue})"
 
 
 [ask]
@@ -121,13 +125,13 @@ review_standards = "docs/code-review-standards.md"
 # recommended = "opus"
 
 # [models.pins]
-# Only for a project that vendors cadence and generates wrappers
-# (tools/wrappers.py): each pin is written as `model:` into that skill's or
-# agent's Claude wrapper. A subagent's pin holds for its whole run, so this is
-# how reviewers get a model of their own. A skill's pin covers the turn that
-# invoked it. The plugin ignores this table.
-# spec-editor = "fable"
-# code-review = "opus"
+# A model per skill or agent. In a project that vendors cadence,
+# tools/wrappers.py writes each pin as `model:` into that Claude wrapper: a
+# subagent's pin holds for its whole run; a skill's covers the turn that invoked
+# it. In any install, a pinned workflow in Claude Code checks the session model
+# against its pin and stops if they differ. Codex ignores pins.
+# eng-design-reviewer = "opus"
+# execute-issue = "sonnet"
 
 
 [retro]

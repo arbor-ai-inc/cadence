@@ -79,17 +79,17 @@ a clean checkout of main.
    **A whole ticket with no reply is a delivery defect — file it**, do not work around
    it each run.
 
-   Everything else a human reads — every issue comment that is not a `human-brief`
-   stop point: corrections, decision records, status notes — follows
+   Every other issue comment a human reads (corrections, decisions, status) follows
    [`explain-plain`](./explain-plain.md).
 6. Run the project's `[commands].lint` and `[commands].test`. Fix failures before
-   proceeding. Commit in logical units, messages in `[git].commit_style`.
+   proceeding. Commit in logical units in `[git].commit_style` (default: issue-prefixed).
 7. Invoke the code-review skill ([`code-review`](./code-review.md)) and drive it to
    LGTM **or its three-round circuit breaker** — both are terminal; open findings go
    into the brief and the PR body.
 8. Push the branch, write the Shape B change brief the code-review step produced to a
    file, and open a PR with
-   `gh pr create --title "<[git].pr_title>" --body-file <brief>`. Both flags are
+   `gh pr create --title "<[git].pr_title>" --body-file <brief>` (default title
+   `{issue}: {summary}`). Both flags are
    required: `--fill` drops the brief, and `--body-file` without `--title` prompts,
    which fails headless. Do NOT merge — squash-merge is a human decision, always.
 9. Post "PR ready: <url>" on the issue (where there is a tracker) and through
@@ -110,7 +110,8 @@ announcement is not mistaken for the finish.
 Done means all of:
 
 - The PR is open, and every required check has **run and passed on the head commit**
-  (`gh pr checks <n>`). A check that never started is "not yet", not a pass.
+  (`gh pr checks <n> --required`); one that never started is "not yet". No required
+  checks: say so.
 - `python3 tools/review_state.py --pr <n>` prints the verdict line as `AT HEAD`
   (`--json` gives the `review_landed_at_head` field a monitor reads).
   **Never read the check row instead**

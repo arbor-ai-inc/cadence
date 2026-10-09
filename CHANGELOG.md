@@ -5,16 +5,18 @@ tagged `v<version>`.
 
 ## 0.10.0
 
-For projects that vendor cadence and have their own conventions. Every new setting
-defaults to today's behavior.
+For projects that vendor cadence and have their own conventions. Every new setting,
+unset, keeps today's behavior; the behavior changes are marked.
 
 - **`[models.pins]`:** per-skill or per-agent models, written by `tools/wrappers.py`
   into the generated Claude wrappers. An agent's pin holds for its whole run; a skill's
-  covers its first turn, and the pinned workflows now check the model again on every
-  resume and stop if it differs. Cadence's published files still pin nothing.
-- **`[git]`:** `branch`, `commit_style` (`issue-prefix` or `conventional`) and
-  `pr_title`. execute-issue and git-pr-workflow name branches, commits and PR titles
-  from them.
+  covers its first turn, so a pinned workflow in Claude Code checks the model on start
+  and on every resume and stops if it differs. Cadence's published files still pin
+  nothing. **Behavior change:** the spec workflows' `[models].recommended` check now
+  runs in Claude Code only.
+- **`[git]`:** `branch`, `commit_style` (`issue-prefix`, `conventional` or
+  `imperative`) and `pr_title`, with placeholders checked at load. Unset, execute-issue
+  and git-pr-workflow keep their own defaults.
 - **`[paths].templates`:** use your own spec templates.
 - **Wait for CI:** a PR is done when every required check has run and passed on the
   head commit, whatever the reviewer. **Behavior change** for `[review].provider =
@@ -22,7 +24,9 @@ defaults to today's behavior.
 - **Messages go to the issue and the ask transport, not Slack by name:** the
   circuit-breaker findings, "PR ready", and an unanswered spec question.
 - **code-review:** no Codex-first default; the configured reviewer runs, at high
-  effort, with an optional second opinion. The cross-boundary BLOCKER names the
+  effort, with an optional second opinion. **Behavior change:** the skill no longer
+  falls back to `codex exec` or the subagent on its own; with `[review].provider =
+  "none"` no reviewer runs, as the reference doc already said. The cross-boundary BLOCKER names the
   artifacts your rubric lists, not a fixed set.
 - **Facts from the source project removed:** its ruleset settings, merge-strategy
   claims, a CI job, a lint config, a principle count and ad-domain vocabulary are now
@@ -31,7 +35,8 @@ defaults to today's behavior.
   find; post-merge proof is the step after the merge; issue comments follow
   explain-plain; model escalation rules; a project lesson about a cadence workflow can
   go in an overlay.
-- `fanout.py` no longer tells you to ask when only one option survives.
+- `fanout.py` no longer tells you to ask when only one option survives — unless it
+  touches the must-stop boundary, which is now checked for a single option too.
 
 ## 0.9.0
 

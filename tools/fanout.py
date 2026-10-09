@@ -581,7 +581,8 @@ def cmd_fork(args):
 
         # --- refusals: cap checks happen before anything is created -------------
         refusal = None
-        if len(options) < 2:
+        single = len(options) < 2
+        if single:
             refusal = f"only {len(options)} surviving option(s) - decide it and `record` instead"
         elif len(options) > caps["max_options"]:
             refusal = (
@@ -603,8 +604,9 @@ def cmd_fork(args):
         # A path check the model cannot reason its way around. If the work leading
         # up to this decision already crossed the boundary, the tree is illegitimate
         # before it exists, and forking would multiply a change that needed one
-        # considered answer.
-        if not refusal:
+        # considered answer. A single survivor is checked too: inside the boundary
+        # it is still a question for the author, not a decision to record.
+        if not refusal or len(options) < 2:
             parent_dir = node_abs_path(root, parent)
             touched = shortstat(parent_dir, state["base_sha"])["names"]
             touched += [
@@ -622,6 +624,7 @@ def cmd_fork(args):
             if hits:
                 listed = "; ".join(f"{path} ({reason})" for path, reason in hits[:4])
                 refusal = f"must-stop boundary: {listed}"
+                single = False
 
         if refusal:
             state["refusals"].append(
@@ -637,7 +640,7 @@ def cmd_fork(args):
             print(f"fanout: REFUSED fan-out: {refusal}", file=sys.stderr)
             # One surviving option is a decision, not a question: its reason
             # already says to decide and record it, so do not also say ask.
-            remedy = "" if len(options) < 2 else " Ask the author via the ask tool instead."
+            remedy = "" if single else " Ask the author via the ask tool instead."
             print(f"fanout: recorded in the tree and rendered in the ledger.{remedy}", file=sys.stderr)
             return 3
 

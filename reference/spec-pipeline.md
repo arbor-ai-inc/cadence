@@ -145,7 +145,8 @@ and the review artifacts.
      harness offers it, otherwise the identical tables as text through
      `python3 tools/ask.py ask "<batched questions>"
      --context "<slug> spec"`, blocking until the author replies. With no one
-     in session to answer, post the batch on the spec's issue and stop. Author answers are applied and recorded in the round
+     in session to answer, post the batch on the spec's tracker issue, where there is
+     one, and stop. Author answers are applied and recorded in the round
      files, and the loop continues.
    - On **PRODUCT_READY** — the **product PR gate** (see [PR Gates](#pr-gates)):
      the pipeline **stops editing `product.md`** (advisory findings are not applied

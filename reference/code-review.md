@@ -96,7 +96,7 @@ owns:
   consumer, and whether that entry joins the gated set.
 
 **2. Can the customer measure what this does?** (principle #15) For a new way to
-spend, serve, fail, or convert, follow it to the reporting path and ask what the
+charge, deliver, fail, or convert, follow it to the reporting path and ask what the
 customer would see:
 
 - **A wrong number is a BLOCKER** — a new outcome merged into an existing count, e.g. a
@@ -243,7 +243,7 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
    that is not an explicit pass-or-fail is a broken harness, never a survival.
 5. Re-run pre-commit and tests, commit the resolutions, re-run the reviewer.
 6. Circuit breaker: max 3 rounds. If not LGTM after round 3, post the open findings
-   as a Shape B change brief on the issue and through `tools/ask.py notify`, and stop. **Stop means stop:** no
+   as a Shape B brief on the issue (if tracked) and via `tools/ask.py notify`; stop. **Stop means stop:** no
    fourth round and no "one last fix" on the way out — a round-N finding is often a
    defect the round-(N−1) fix introduced (C-15). A commit after the last review is
    **named in the brief and PR body** with what it changed; never call that head LGTM.

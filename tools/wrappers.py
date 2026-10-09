@@ -199,8 +199,9 @@ def main(argv: list[str] | None = None) -> int:
     names |= {p.stem for p in (PLUGIN_ROOT / "agents").glob("*.md")}
     unknown = sorted(set(cfg.model_pins) - names)
     if unknown:
-        print(f"wrappers: [models.pins] names {', '.join(unknown)}, which is no cadence "
-              f"skill or agent. Known: {', '.join(sorted(names))}", file=sys.stderr)
+        print(f"wrappers: [models.pins] names {', '.join(unknown)}, which is no wrapped "
+              f"cadence skill or agent ({', '.join(sorted(SKIP_SKILLS))} is not wrapped). "
+              f"Known: {', '.join(sorted(names))}", file=sys.stderr)
         return 1
 
     want = planned(project, targets, cfg.overlays_dir, cfg.model_pins)

@@ -2,7 +2,7 @@
 name: code-reviewer
 description: >
   Adversarial diff reviewer. Fresh context, never the implementer. The reviewer
-  the code-review skill invokes.
+  the code-review skill invokes when `[review].provider = "subagent"`.
 tools: Read, Grep, Glob, Bash
 ---
 

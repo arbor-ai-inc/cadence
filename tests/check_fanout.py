@@ -777,6 +777,18 @@ class TestMustStop(FanoutCase):
         self.assertEqual(code, 3)
         self.assertIn("schema", err)
 
+    def test_a_single_option_inside_the_boundary_is_still_asked(self):
+        self.init()
+        code, _out, err = self.run_cli(
+            "fork", ISSUE,
+            "--decision", "Q", "--why-you", "the tradeoff is the author\'s", "--source", "app.py:1",
+            "--touches", "api/models.py",
+            "--option", "a:does a:reason a",
+        )
+        self.assertEqual(code, 3)
+        self.assertIn("must-stop boundary", err)
+        self.assertIn("ask tool", err)
+
 
 class TestMustStopBypasses(FanoutCase):
     """The ways a protected path can reach a commit without looking like one."""

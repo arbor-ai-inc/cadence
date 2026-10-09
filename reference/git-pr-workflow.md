@@ -25,20 +25,19 @@ committed.
 
 ## Branch Naming
 
-Name the branch per `[git].branch` (`cadence config` prints it), e.g.
-`{owner}/{issue_lower}-{slug}` → `alex/xx-5-git-pr-workflow`.
+Name the branch per `[git].branch` where set (`cadence config` prints it); unset,
+`<owner>/<ticket-or-topic>`, e.g. `alex/xx-5-git-pr-workflow`.
 
 - Use the user's requested branch name when provided.
-- Use lowercase words separated by hyphens.
-- An agent with no owner given uses its own name as `{owner}` (`codex/…`).
-- With no issue, use a topic in its place.
+- Use the ticket key when known; lowercase words separated by hyphens.
+- An agent with no owner given uses its own name as owner (`codex/<topic>`).
 
 ## Workflow
 
 1. Start clean: run `git status --short --branch`.
 2. Create or switch to the branch before editing.
 3. Keep the branch focused on one logical change.
-4. Commit related changes together, in `[git].commit_style` (§ *Commit Guidance*).
+4. Commit related changes together (§ *Commit Guidance*).
 5. Run focused verification before pushing — including the linters CI enforces.
    Run the lint command (`[commands].lint`) yourself: CI may run it over all files,
    and local git hooks are not guaranteed to be installed, so a format-only miss
@@ -51,8 +50,8 @@ Name the branch per `[git].branch` (`cadence config` prints it), e.g.
 7. Push the branch and create a PR, with a summary and verification section.
 8. **Wait for CI and fix what it finds**, before involving anyone else, whatever
    the reviewer. This step is not complete when the PR exists: every required check
-   must have **run and passed on the head commit** (`gh pr checks <n>`). A check that
-   never started is not a pass. Where `[review].provider` names a PR-time reviewer,
+   must have **run and passed on the head commit** (`gh pr checks <n> --required`). A
+   check that never started is not a pass; a repo with no required checks says so. Where `[review].provider` names a PR-time reviewer,
    the step also needs that review *landed* and its findings resolved or explicitly
    declined. See
    [`automated-review`](./automated-review.md) for the terminal condition and the
@@ -95,10 +94,12 @@ settled. It is a separate doc so a project without a PR bot never loads it.
 
 ## Commit Guidance
 
-Commit messages are short, imperative and specific, in `[git].commit_style`:
+Commit messages are short, imperative and specific, in `[git].commit_style` where
+set; unset, plain imperative:
 
 ```text
-XX-5: add the agent skill presubmit guard          # issue-prefix (default)
+Add the agent skill presubmit guard                # imperative (default here)
+XX-5: add the agent skill presubmit guard          # issue-prefix
 feat(skills): add the agent skill presubmit guard  # conventional
 ```
 
@@ -115,7 +116,7 @@ metadata into the commit subject.
 
 ## PR Creation
 
-Title it per `[git].pr_title`. Every PR should include:
+Title it per `[git].pr_title` where set. Every PR should include:
 
 - Summary of what changed.
 - Verification performed.

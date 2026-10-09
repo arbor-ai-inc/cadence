@@ -80,7 +80,7 @@ subset: what a diff can break cheaply now and expensively later.
 | **#4 / #12** Earned abstractions, thin foundations | At N=2, is the shared part actually factored, or is the trivial part extracted while the duplicated part is copy-pasted? Does this add a *third* parallel way to do something the repo already has two conventions for? |
 | **#5** Deterministic core | Is non-determinism entering a path that must be reproducible? |
 | **#26** Text is a maintenance commitment | Does the diff restate a fact with a canonical home, or push an artifact further over its ceiling unwaived? |
-| **#15 / #14** Observable behavior, journey completeness | Does the change add customer-affecting behavior that nothing measures or nothing surfaces? A new outcome merged into an existing count so the customer cannot tell the two apart is a **wrong number**, not a missing feature. A capability reachable only by API, with no console surface, is invisible to the person it was built for — name the gap and let the author scope it or file it |
+| **#15 / #14** Observable behavior, journey completeness | Does the change add customer-affecting behavior that nothing measures or nothing surfaces? A new outcome merged into an existing count so the customer cannot tell the two apart is a **wrong number**, not a missing feature. A capability reachable only by API, with no UI surface, is invisible to the person it was built for — name the gap and let the author scope it or file it |
 | **#22 / #23** Understandability, recorded decisions | Can the next engineer trace the touched flow from docs + code? Is a load-bearing decision made in this diff recorded anywhere? |
 
 Two things follow from this being a *diff* review, not a design review:
@@ -100,8 +100,8 @@ Two things follow from this being a *diff* review, not a design review:
 A **cross-boundary endpoint** is any interface a component in one plane calls on a
 component in another: an HTTP route, an RPC, a queue topic another plane drains,
 or a table another plane reads directly. The test is **who calls it**, not where
-it is defined — `POST /crawl` is implemented in the Serving plane but exists
-because Platform jobs call it, and that is what makes it an edge.
+it is defined — a route implemented in one plane but called by jobs in another
+is an edge because of who calls it.
 
 The edges that exist today are enumerated in
 your contract index and drawn in your architecture
@@ -133,7 +133,7 @@ of the following, in the same PR:
 | 2 | your contract index — enumerated edge list | A row: direction, and what pins the shape (a schema file, or the doc holding it in prose) |
 | 3 | Both sides' architecture docs' *Boundary contracts* tables | The **producer** side and the **consumer** side. An edge listed on one side only is exactly the defect the audit found |
 | 4 | The component doc's route table | The endpoint itself — method, path, auth/min role, purpose |
-| 5 | The contract file, plus whatever set your gate checks | Only if the payload has a schema file. **Having no schema file is not an exemption** — two of the five edges are pinned in prose, and prose still has to change |
+| 5 | The contract file, plus whatever set your gate checks | Only if the payload has a schema file. **Having no schema file is not an exemption** — an edge pinned in prose still has to change |
 
 ### Check
 
@@ -310,8 +310,8 @@ appropriate.
 - **In your codebase:** _<name one concrete pattern or decision in your system that this principle already governs — the thing a reviewer can point at. Delete this principle if nothing here does.>_
 - **Check:** is non-critical work kept off the latency-sensitive path? Does a
   failure in it degrade gracefully rather than breaking the customer path?
-- **Violation:** the retired serving-plane Go rollup job — synchronous reporting
-  writes coupled into the serving tree (a plane-boundary breach *and* critical-
+- **Violation:** a reporting job living in the request-serving tree — synchronous
+  reporting writes coupled into the hot path (a plane-boundary breach *and* critical-
   path contamination).
 
 ## 12. Build foundational capabilities thinly

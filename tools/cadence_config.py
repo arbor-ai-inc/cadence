@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tomllib
@@ -39,7 +40,11 @@ CONFIG_NAME = "cadence.toml"
 TRACKER_PROVIDERS = ("linear", "github", "none")
 ASK_PROVIDERS = ("harness", "slack", "stdout")
 REVIEW_PROVIDERS = ("coderabbit", "codex", "claude", "subagent", "none")
-COMMIT_STYLES = ("issue-prefix", "conventional")
+COMMIT_STYLES = ("issue-prefix", "conventional", "imperative")
+GIT_PLACEHOLDERS = ("issue", "issue_lower", "slug", "owner", "summary")
+# A model name as the harness takes it: `opus`, `claude-opus-5-5`.
+# Anything else (spaces, `#`, a newline) would be written raw into frontmatter.
+MODEL_NAME = re.compile(r"^[A-Za-z0-9._\[\]-]+$")
 
 
 class ConfigError(Exception):
@@ -90,12 +95,12 @@ class Config:
     # Unset means cadence's own templates/.
     templates_dir: str | None = None
 
-    # How branches, commits and PR titles are named. The defaults are cadence's
-    # long-standing ones; a project with its own convention sets [git].
+    # How branches, commits and PR titles are named. Unset (None) keeps each
+    # workflow's own long-standing default; a project with one convention sets [git].
     # Placeholders: {issue} (as written), {issue_lower}, {slug}, {owner}, {summary}.
-    branch_pattern: str = "{issue_lower}"
-    commit_style: str = "issue-prefix"
-    pr_title_pattern: str = "{issue}: {summary}"
+    branch_pattern: str | None = None
+    commit_style: str | None = None
+    pr_title_pattern: str | None = None
 
     # ADVISORY ONLY, and the docstring below says why. Cadence cannot force a
     # model. A skill's `model:` pin lasts only the turn that invoked it, and a
@@ -222,6 +227,9 @@ def load(start: Path | None = None) -> Config:
     fanout = raw.get("fanout", {})
     gitc = raw.get("git", {})
     models = raw.get("models", {})
+    for name, table in (("git", gitc), ("models", models), ("models.pins", models.get("pins", {}) if isinstance(models, dict) else {})):
+        if not isinstance(table, dict):
+            raise ConfigError(f"{path}: [{name}] must be a table")
 
     entries = []
     for i, item in enumerate(raw.get("must_stop", [])):
@@ -259,9 +267,9 @@ def load(start: Path | None = None) -> Config:
         review_standards_path=paths.get("review_standards", Config.review_standards_path),
         overlays_dir=paths.get("overlays"),
         templates_dir=paths.get("templates"),
-        branch_pattern=gitc.get("branch", Config.branch_pattern),
-        commit_style=_require(raw, "git", "commit_style", COMMIT_STYLES, "issue-prefix"),
-        pr_title_pattern=gitc.get("pr_title", Config.pr_title_pattern),
+        branch_pattern=gitc.get("branch"),
+        commit_style=_require(raw, "git", "commit_style", COMMIT_STYLES, None) if "commit_style" in gitc else None,
+        pr_title_pattern=gitc.get("pr_title"),
         models_recommended=models.get("recommended"),
         model_pins=dict(models.get("pins", {})),
         synthesis_threshold=int(retro.get("synthesis_threshold", Config.synthesis_threshold)),
@@ -279,9 +287,23 @@ def load(start: Path | None = None) -> Config:
             f"{', '.join(sorted(unknown_model_keys))}. A key here that looks like it "
             f"assigns a model but is not read would be doing nothing."
         )
-    if not isinstance(models.get("pins", {}), dict) or not all(
-            isinstance(v, str) and v.strip() for v in cfg.model_pins.values()):
-        raise ConfigError(f"{path}: [models.pins] maps a skill or agent name to a model name")
+    for name, model in cfg.model_pins.items():
+        if not isinstance(model, str) or not MODEL_NAME.match(model):
+            raise ConfigError(f"{path}: [models.pins].{name} = {model!r} is not a model name "
+                              f"(letters, digits, . _ - [ ] only)")
+    for key in ("templates",):
+        if key in paths and not isinstance(paths[key], str):
+            raise ConfigError(f"{path}: [paths].{key} must be a string")
+    for key in ("branch", "pr_title"):
+        value = gitc.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise ConfigError(f"{path}: [git].{key} must be a non-empty string")
+        unknown = set(re.findall(r"{([^}]*)}", value)) - set(GIT_PLACEHOLDERS)
+        if unknown:
+            raise ConfigError(f"{path}: [git].{key} uses {{{', '.join(sorted(unknown))}}}; "
+                              f"placeholders are {', '.join('{'+p+'}' for p in GIT_PLACEHOLDERS)}")
     unknown_git_keys = set(gitc) - {"branch", "commit_style", "pr_title"}
     if unknown_git_keys:
         raise ConfigError(f"{path}: [git] reads branch, commit_style and pr_title; found "
@@ -391,11 +413,11 @@ def selftest() -> int:
         g = load(root)
         check("templates dir loads", g.templates_dir == "specs")
         check("git conventions load", g.branch_pattern == "{owner}/{issue_lower}-{slug}"
-              and g.commit_style == "conventional" and g.pr_title_pattern == "{issue}: {summary}")
+              and g.commit_style == "conventional" and g.pr_title_pattern is None)
         check("model pins load", g.model_pins == {"spec-editor": "fable"})
         check("no pins by default", Config(root=root).model_pins == {})
-        check("cadence's git defaults", Config(root=root).branch_pattern == "{issue_lower}"
-              and Config(root=root).commit_style == "issue-prefix")
+        check("unset [git] keeps each workflow's default", Config(root=root).branch_pattern is None
+              and Config(root=root).commit_style is None and Config(root=root).pr_title_pattern is None)
 
         check("fan-out is off by default", Config(root=root).fanout_enabled is False)
         (root / CONFIG_NAME).write_text('[fanout]\nenabled = true\n')
@@ -412,6 +434,13 @@ def selftest() -> int:
             ('[git]\ncommit_style = "freeform"\n', "an unknown commit style"),
             ('[git]\nbranches = "x"\n', "an unknown [git] key"),
             ('[models.pins]\nspec-editor = ""\n', "an empty model pin"),
+            ('[models]\npins = "opus"\n', "pins that are not a table"),
+            ('[models.pins]\nspec-editor = "opus # x"\n', "a pin that is not a model name"),
+            ('[models.pins]\nspec-editor = "opus\\nallowed-tools: Bash"\n', "a pin carrying a newline"),
+            ('git = "x"\n', "a [git] that is not a table"),
+            ('[git]\nbranch = 5\n', "a non-string branch pattern"),
+            ('[git]\nbranch = "{issu_lower}"\n', "a misspelled placeholder"),
+            ('[paths]\ntemplates = 5\n', "a non-string templates path"),
         ):
             (root / CONFIG_NAME).write_text(bad)
             try:
@@ -485,7 +514,9 @@ def main() -> int:
         print(f"model:    {cfg.models_recommended} (recommended; advisory, not enforced)")
     print(f"specs:    {cfg.specs_dir}\nretros:   {cfg.retros_dir}")
     print(f"templates: {cfg.templates_dir or '(cadence templates/)'}")
-    print(f"git:      branch {cfg.branch_pattern}, commits {cfg.commit_style}, PR title {cfg.pr_title_pattern}")
+    d = "(workflow default)"
+    print(f"git:      branch {cfg.branch_pattern or d}, commits {cfg.commit_style or d}, "
+          f"PR title {cfg.pr_title_pattern or d}")
     for name, model in sorted(cfg.model_pins.items()):
         print(f"pin:      {name} -> {model}")
     if cfg.overlays_dir:
