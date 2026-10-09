@@ -138,6 +138,18 @@ and it is why this reader exists.
 Provider specifics — exact commands, API quirks — are in
 [`reference/providers/`](../reference/providers/).
 
+### Circuit breakers — when a review loop stops
+
+```toml
+[review]
+circuit_breaker = 3        # pre-PR code-review rounds before handing findings to a human
+spec_circuit_breaker = 3   # spec-review rounds in a row without fewer blockers
+max_rounds = 3             # post-PR review rounds
+```
+
+Each must be at least 1; all default to 3. A breaker stops the loop and hands the
+open findings to a human; raising it buys rounds, not convergence.
+
 ### `[paths].principles` — the Gate 2 rubric
 
 Gate 2 grades an engineering design against this file and nothing else, so

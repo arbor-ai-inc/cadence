@@ -125,7 +125,7 @@ specifics live in [`providers/`](./providers/); this holds for any of them.
 
 ## When Review Rounds Do Not Converge
 
-When the three-round circuit breaker fires:
+When the code-review circuit breaker fires:
 
 1. Resolve what can be resolved, and mutation-test the resolutions.
 2. **Say in the PR that the last round's fixes were not re-reviewed, naming the commit**

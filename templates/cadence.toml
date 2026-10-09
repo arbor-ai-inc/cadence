@@ -81,6 +81,12 @@ provider = "none"
 # bot_login = "coderabbitai[bot]"
 # Post-PR review rounds before a workflow stops and reports what is unresolved.
 max_rounds = 3
+# Circuit breakers. Pre-PR code-review rounds before the loop stops and hands the
+# open findings to a human:
+circuit_breaker = 3
+# Spec-review rounds in a row without fewer blockers before the spec pipeline
+# escalates to the author:
+spec_circuit_breaker = 3
 
 
 [paths]

@@ -43,7 +43,7 @@ Name the branch per `[git].branch` where set (`cadence config` prints it); unset
    and local git hooks are not guaranteed to be installed, so a format-only miss
    fails CI rather than your commit (T-21 PR U).
 6. **Adversarial review BEFORE the PR exists**, for anything non-trivial — run
-   [`code-review`](./code-review.md) and drive it to LGTM or its 3-round circuit
+   [`code-review`](./code-review.md) and drive it to LGTM or its circuit
    breaker. Reviewer must be a context that did not write the code. This is the
    cheapest point to find a wrong boundary, and it is where the mutation check
    (§ Loop step 4) happens.

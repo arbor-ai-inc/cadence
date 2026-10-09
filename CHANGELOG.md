@@ -18,6 +18,9 @@ unset, keeps today's behavior; the behavior changes are marked.
   `imperative`) and `pr_title`, with placeholders checked at load. Unset, execute-issue
   and git-pr-workflow keep their own defaults.
 - **`[paths].templates`:** use your own spec templates.
+- **Circuit breakers in config:** `[review].circuit_breaker` (pre-PR code-review
+  rounds) and `[review].spec_circuit_breaker` (spec rounds without fewer blockers),
+  both default 3, alongside the existing post-PR `[review].max_rounds`.
 - **Wait for CI:** a PR is done when every required check has run and passed on the
   head commit, whatever the reviewer. **Behavior change** for `[review].provider =
   "none"`, which used to end at a locally green PR.

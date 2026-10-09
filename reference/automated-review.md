@@ -261,7 +261,7 @@ out, and that the work is incomplete.**
 
 ### Loop until settled, bounded — a separate counter
 
-Bound the fix rounds at **three**, then post the open findings on the issue (where
+Bound the fix rounds at **`[review].max_rounds`** (default 3), then post the open findings on the issue (where
 there is a tracker) and via `tools/ask.py notify`, and hand to a human.
 
 **A round that changes code is verified before it is pushed** —

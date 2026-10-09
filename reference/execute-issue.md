@@ -84,7 +84,7 @@ a clean checkout of main.
 6. Run the project's `[commands].lint` and `[commands].test`. Fix failures before
    proceeding. Commit in logical units in `[git].commit_style` (default: issue-prefixed).
 7. Invoke the code-review skill ([`code-review`](./code-review.md)) and drive it to
-   LGTM **or its three-round circuit breaker** — both are terminal; open findings go
+   LGTM **or its circuit breaker** — both are terminal; open findings go
    into the brief and the PR body.
 8. Push the branch, write the Shape B change brief the code-review step produced to a
    file, and open a PR with

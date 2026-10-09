@@ -21,7 +21,7 @@ Emit a brief at every point where the workflow stops and waits for a human:
 
 | Stop point | Shape |
 |---|---|
-| `code-review` reaching LGTM, findings handed back, or the 3-round circuit breaker firing | B |
+| `code-review` reaching LGTM, findings handed back, or its circuit breaker firing | B |
 | `code-review` finding that needs a product decision | A |
 | `spec-pipeline` `decision: author` batch | A |
 | `spec-pipeline` DESIGN_READY changelog + decomposition | B |

@@ -82,6 +82,11 @@ class Config:
     review_provider: str = "none"
     review_bot_login: str | None = None
     review_max_rounds: int = 3
+    # Pre-PR code-review rounds before the loop stops and hands open findings to a
+    # human; and spec-review rounds without a drop in blockers before the spec
+    # pipeline escalates. Both are circuit breakers, not targets.
+    circuit_breaker: int = 3
+    spec_circuit_breaker: int = 3
 
     specs_dir: str = "specs"
     retros_dir: str = "docs/retros"
@@ -261,6 +266,8 @@ def load(start: Path | None = None) -> Config:
         review_provider=_require(raw, "review", "provider", REVIEW_PROVIDERS, "none"),
         review_bot_login=review.get("bot_login"),
         review_max_rounds=int(review.get("max_rounds", Config.review_max_rounds)),
+        circuit_breaker=int(review.get("circuit_breaker", Config.circuit_breaker)),
+        spec_circuit_breaker=int(review.get("spec_circuit_breaker", Config.spec_circuit_breaker)),
         specs_dir=paths.get("specs", Config.specs_dir),
         retros_dir=paths.get("retros", Config.retros_dir),
         principles_path=paths.get("principles", Config.principles_path),
@@ -311,6 +318,9 @@ def load(start: Path | None = None) -> Config:
 
     if cfg.review_provider == "coderabbit" and not cfg.review_bot_login:
         cfg.review_bot_login = "coderabbitai[bot]"
+    for key in ("max_rounds", "circuit_breaker", "spec_circuit_breaker"):
+        if getattr(cfg, "review_max_rounds" if key == "max_rounds" else key) < 1:
+            raise ConfigError(f"{path}: [review].{key} must be at least 1")
     if cfg.synthesis_threshold < 1:
         raise ConfigError(f"{path}: [retro].synthesis_threshold must be at least 1")
     if not isinstance(cfg.fanout_enabled, bool):
@@ -416,6 +426,10 @@ def selftest() -> int:
               and g.commit_style == "conventional" and g.pr_title_pattern is None)
         check("model pins load", g.model_pins == {"spec-editor": "fable"})
         check("no pins by default", Config(root=root).model_pins == {})
+        check("circuit breakers default to 3", Config(root=root).circuit_breaker == 3
+              and Config(root=root).spec_circuit_breaker == 3)
+        (root / CONFIG_NAME).write_text('[review]\ncircuit_breaker = 5\nspec_circuit_breaker = 4\n')
+        check("circuit breakers load", load(root).circuit_breaker == 5 and load(root).spec_circuit_breaker == 4)
         check("unset [git] keeps each workflow's default", Config(root=root).branch_pattern is None
               and Config(root=root).commit_style is None and Config(root=root).pr_title_pattern is None)
 
@@ -441,6 +455,8 @@ def selftest() -> int:
             ('[git]\nbranch = 5\n', "a non-string branch pattern"),
             ('[git]\nbranch = "{issu_lower}"\n', "a misspelled placeholder"),
             ('[paths]\ntemplates = 5\n', "a non-string templates path"),
+            ('[review]\ncircuit_breaker = 0\n', "a zero circuit breaker"),
+            ('[review]\nspec_circuit_breaker = 0\n', "a zero spec circuit breaker"),
         ):
             (root / CONFIG_NAME).write_text(bad)
             try:
@@ -509,6 +525,8 @@ def main() -> int:
     print(f"root:   {cfg.root}\nconfig: {where}\n")
     print(f"lint:     {cfg.lint}\ntest:     {cfg.test}")
     print(f"tracker:  {cfg.tracker_provider}\nask:      {cfg.ask_provider}\nreview:   {cfg.review_provider}")
+    print(f"breakers: code review {cfg.circuit_breaker} rounds, spec {cfg.spec_circuit_breaker}, "
+          f"post-PR {cfg.review_max_rounds}")
     print(f"fan-out:  {'on' if cfg.fanout_enabled else 'off (one-way decisions are asked)'}")
     if cfg.models_recommended:
         print(f"model:    {cfg.models_recommended} (recommended; advisory, not enforced)")

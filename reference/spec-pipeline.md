@@ -691,8 +691,8 @@ Gate 2 re-runs without re-reviewing the product spec.
 
 ## Circuit Breaker
 
-If unresolved blocker count fails to strictly decrease across three
-consecutive review rounds, the pipeline pauses and escalates all open
+If unresolved blocker count fails to strictly decrease across
+`[review].spec_circuit_breaker` consecutive review rounds (default 3), the pipeline pauses and escalates all open
 questions to the author via `ask.py ask` regardless of decision tags.
 
 **The breaker applies only while blockers are above zero.** A gate at zero

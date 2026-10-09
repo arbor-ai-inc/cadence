@@ -18,6 +18,6 @@ Lint + tests green before round 1 and after every resolution round.
 
 Resolve all BLOCKER/SHOULD findings; product questions go to the ask transport via `${CLAUDE_PLUGIN_ROOT}/tools/ask.py`.
 
-Circuit breaker at 3 rounds: post open findings on the issue and to the ask transport, and stop. Never merge.
+Circuit breaker at `[review].circuit_breaker` rounds (default 3): post open findings on the issue and to the ask transport, and stop. Never merge.
 
 On LGTM, hand back a Shape B change brief per `${CLAUDE_PLUGIN_ROOT}/reference/human-brief.md` — plain-English consequences, evidence per row, and where the reviewer and I disagreed.

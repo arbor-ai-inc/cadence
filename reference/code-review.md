@@ -24,8 +24,8 @@ context, preferably a different model or agent. `[review].provider` in
 
 **Prefer a different agent from the implementer** where one exists (Claude Code →
 `codex`; Codex → `claude`); `subagent` is same-model, so weakest at what that model
-missed. Run it on the strongest review model at high effort. Another agent's CLI may
-add a read-only second opinion on the same inputs.
+missed. Run it on the strongest review model at high effort; another agent's CLI may add
+a read-only second opinion.
 
 ### Driving with Codex
 
@@ -242,9 +242,9 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
    `test-driven-development.md` § *Mutation-test any change that adds a rule*; output
    that is not an explicit pass-or-fail is a broken harness, never a survival.
 5. Re-run pre-commit and tests, commit the resolutions, re-run the reviewer.
-6. Circuit breaker: max 3 rounds. If not LGTM after round 3, post the open findings
-   as a Shape B brief on the issue (if tracked) and via `tools/ask.py notify`; stop. **Stop means stop:** no
-   fourth round and no "one last fix" on the way out — a round-N finding is often a
+6. Circuit breaker: `[review].circuit_breaker` rounds (default 3). Not LGTM by the
+   last: post open findings as a Shape B brief on the issue (if tracked) and via
+   `tools/ask.py notify`; stop. **Stop means stop:** no extra round and no "one last fix" on the way out — a round-N finding is often a
    defect the round-(N−1) fix introduced (C-15). A commit after the last review is
    **named in the brief and PR body** with what it changed; never call that head LGTM.
 7. On LGTM, write and print the Shape B change brief (`human-brief.md`) — the only

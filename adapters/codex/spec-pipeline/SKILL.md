@@ -97,7 +97,7 @@ Two gates: **Gate 1 (product)** reviews `<[paths].specs>/<slug>/product.md`; **G
    *before* the gate's PR so their ids land in `carried-advisories.md`. Only the task
    graph waits for the merge. See
    the [PR Gates] and [Acknowledgment] sections of the canonical doc.
-5. Circuit breaker: if blockers do not strictly decrease over 3 consecutive
+5. Circuit breaker: if blockers do not strictly decrease over `[review].spec_circuit_breaker` (default 3) consecutive
    rounds, escalate all open questions to author via `python3 .cadence/tools/ask.py ask`.
 
 Compute hashes via `python3 .cadence/tools/spec_hash.py` before each review
