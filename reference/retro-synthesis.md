@@ -179,6 +179,11 @@ escape hatch.
   `0`, and `archive/batch-NN.md` contains every fragment consumed.
 - Every cluster in the batch appears in `TRAPS.md` with an updated count — including
   the n=1 ones, which is the only trace they leave.
+- Check the ledger against the fragments' **raw text**, not your own parsed set —
+  comparing a parse to a ledger built from the same parse passes whatever the parse
+  dropped (one batch lost four clusters to a regex that missed trailing comments).
+  List every slug under each `traps:` block in the archived batch and diff that against
+  the ledger rows.
 - `git diff --stat main` shows deletions, not only insertions.
 - Any rule that became a check has a failing-then-passing demonstration: break the
   thing deliberately, confirm the hook or test fails, restore it.
