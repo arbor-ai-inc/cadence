@@ -44,6 +44,8 @@ ATTRIBUTION_OK = frozenset({
     "README.md",
     ".claude-plugin/plugin.json",
     ".claude-plugin/marketplace.json",
+    # Names the maintainers by handle; GitHub needs the handles to route review.
+    ".github/CODEOWNERS",
 })
 
 
