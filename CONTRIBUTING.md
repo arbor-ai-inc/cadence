@@ -11,8 +11,7 @@ Pull requests are welcome from anyone. You need no access to the repository.
    `check_vocab.py`, which needs repositories you do not have; a maintainer runs it.
 4. **Open the pull request.** Say what changes for someone who already uses cadence.
    CI must pass. Your first CI run waits until a maintainer starts it.
-5. **Review.** A code owner ([`.github/CODEOWNERS`](.github/CODEOWNERS)) must approve
-   the pull request before it can merge. When it merges, the release workflow tags
+5. **Review.** A maintainer reviews it and merges it. When it merges, the release workflow tags
    `v<version>`.
 
 Contributions are licensed under Apache 2.0 (section 5 of [`LICENSE`](LICENSE)).
