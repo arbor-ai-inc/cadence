@@ -115,6 +115,10 @@ synthesis_threshold = 15
 
 
 [fanout]
+# Off by default. With it off, a one-way decision is ASKED (a decision brief) and
+# fanout.py refuses to build a tree. Turn it on to have an autonomous run build
+# each defensible option in its own worktree and keep going instead of waiting.
+enabled = false
 # Caps on the decision fan-out tree. The combinatorics break first, not the
 # token cost. A refusal is always recorded and printed, never silently applied.
 max_leaves = 8

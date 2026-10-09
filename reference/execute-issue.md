@@ -157,9 +157,10 @@ You Fork*. Short form:
   to undo): decide it, record what reversing would cost, and keep going.
   Scope discipline is unchanged — work outside the issue's scope is a
   question, not a decision.
-- **A one-way door whose effects stay inside this diff**: fan out instead of
-  stalling. Build each defensible option in its own worktree per
-  [`decision-fanout`](./decision-fanout.md), and run step 6 in every leaf.
+- **A one-way door whose effects stay inside this diff**: **only when
+  `[fanout].enabled = true`**, fan out instead of stalling — build each defensible
+  option in its own worktree per [`decision-fanout`](./decision-fanout.md), and run
+  step 6 in every leaf. **With fan-out off (the default), ask**, per step 5.
 - **`must-stop`**, **or a fan-out `fanout.py` refused for a cap**: ask,
   per step 5 — not variants, and not re-shaping a refused fan-out until it fits.
 
@@ -174,14 +175,15 @@ You Fork*. Short form:
 
 **Exit 3 on its own does not mean ask** — it is every `fork` refusal; read the printed
 reason. A cap
-(`max_options` / `max_depth` / `max_leaves`) or `must-stop boundary:` is the ask
-above. But `only N surviving option(s)` means there was never a fork to build, so
+(`max_options` / `max_depth` / `max_leaves`), `must-stop boundary:` or `fan-out is
+off` is the ask above. But `only N surviving option(s)` means there was never a fork to build, so
 it belongs to the first branch: decide it and `record` — do not escalate it.
 
 `fanout.py` prints `Ask the author ... instead` under **every** refusal, including
 that one, whose reason says `decide it and \`record\` instead`. The reason is right and
 the remedy line is not; this doc is the tie-breaker until the tool is fixed.
 
-Only the ask branch reaches step 5 — `must-stop`, and a `fork` refused for a cap.
+Only the ask branch reaches step 5 — `must-stop`, a `fork` refused for a cap, and any
+one-way door when fan-out is off.
 A decision you make and a decision you fan out are both answered without a question.
 A fanned decision is deferred, not answered, so it is still mirrored onto the issue.

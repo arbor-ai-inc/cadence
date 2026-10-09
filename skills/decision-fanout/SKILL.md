@@ -2,12 +2,15 @@
 name: decision-fanout
 description: >
   Use when an autonomous implementation run hits a decision with more than one
-  defensible answer: build each option in its own worktree, log the decision,
-  and keep going instead of blocking on the author.
+  defensible answer and the project set [fanout].enabled = true: build each
+  option in its own worktree, log the decision, and keep going instead of
+  blocking on the author. Off by default; then ask instead.
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Task
 ---
 
 Follow `${CLAUDE_PLUGIN_ROOT}/reference/decision-fanout.md` exactly.
+
+**Only when `[fanout].enabled = true`** (off by default; `./.cadence/cadence config` shows it). Off → ask with a Shape A brief instead.
 
 Classify first: mechanical and reversible decisions get a `record` line, not a branch.
 
