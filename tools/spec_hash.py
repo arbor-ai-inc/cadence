@@ -18,14 +18,13 @@ Usage:
 
 Two-file layout (recommended): a spec is <specs>/<slug>/product.md plus
 <specs>/<slug>/design.md, where <specs> is [paths].specs from cadence.toml.
-Both gate hashes use whole-file "spec" mode:
   product_hash = spec_hash.py spec   <specs>/<slug>/product.md
   design_hash  = spec_hash.py design <specs>/<slug>/design.md
 
 "design" mode exists because a large design splits into an HLD (design.md) plus
 sub-designs under <specs>/<slug>/design/, and those files are one Gate 2 artifact:
 a verdict that named only design.md's bytes would leave a sub-design edit
-invisible to the freeze rule. It covers every committed file under design/, at any
+invisible to the freeze rule. It covers every file on disk under design/, at any
 depth and whatever the extension — a .json fixture or design/storage/detail.md
 is as much part of the artifact as design/storage.md, and omitting it would
 leave a hole exactly where someone would put content to keep it out.
@@ -120,7 +119,10 @@ def product_slice(lines):
 
 
 def sub_design_paths(design_path):
-    """Every committed file under the sibling design/ directory, at any depth.
+    """Every file on disk under the sibling design/ directory, at any depth.
+
+    On disk, not committed: an untracked stray (an editor backup, a draft) moves
+    the digest too, so keep design/ to the files the design PR will carry.
 
     Sorted by POSIX relative path (codepoint order, locale-independent) and
     returned as (relative path, absolute path) pairs, because the path is part

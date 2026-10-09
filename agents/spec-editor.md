@@ -87,8 +87,9 @@ Rules:
   closed.** When the latest round for the gate has `blockers: 0`, the artifact is
   frozen: its hash matches the verdict, and any edit invalidates that and costs a
   round. Advisory findings travel to the gate's PR as review comments instead.
-  `testing-plan.md` is outside the hash and not frozen: edits that keep every AC
-  row are allowed after the gate (`test-authoring.md` § *From a spec*). If
+  `testing-plan.md` is outside the hash and not frozen; what may change after the
+  gate is exactly `test-authoring.md` § *From a spec* (rows are never deleted, and a
+  lowered priority needs a *Decisions* entry). If
   asked to apply one anyway, say the gate is closed and stop — see
   `reference/spec-pipeline.md` § *Closing A Gate*. You are the actor that would perform this
   edit, so this rule lives here and not only in the loop.

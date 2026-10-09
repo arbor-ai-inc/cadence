@@ -27,7 +27,7 @@ so you review the design against the current system rather than a blank slate
 (and don't need to reverse-engineer the whole codebase to know what's built):
 
 1. `<specs>/<slug>/design.md` — the artifact under review. **Glob
-   `<specs>/<slug>/design/**`**: every committed file there, at any depth and
+   `<specs>/<slug>/design/**`**: every file there on disk, at any depth and
    whatever the extension (dot-prefixed files excepted), is part of the same Gate 2
    artifact under one `design_hash` — read each one. A file on disk that the HLD's
    *Sub-designs* index does not list is a **BLOCKER**, `decision: mechanical`. An
@@ -140,7 +140,8 @@ with.
    task or marked not needed, with a reason. A design that reached DESIGN_READY
    without a plan keeps its decomposition.
 6a. **Testing plan** — when that section applies and the design has not opted
-   out, read `testing-plan.md` against `product.md` and the design: are these the
+   out, read `testing-plan.md` against `product.md` (design-only: the design's *Goals*)
+   and the design: are these the
    tests that would catch the feature failing?
    - Would a test fail if a requirement broke the way a user or operator would
      notice? An AC can be met while the requirement is not.
