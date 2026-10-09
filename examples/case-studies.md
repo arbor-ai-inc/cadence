@@ -518,3 +518,31 @@ Eleven tickets built on a wrong premise (C-13, C-14).
   left it open.
 - One issue asked for a counter that had never held a value in the environment it
   named — metrics were disabled there, and three files in the repo already said so.
+
+### T-29 — a docs-only diff that was all claims
+
+Nine documentation files changed; all seven review findings were sentences the shipped
+code does not do. One copied a design sentence about a startup script into the
+project's current-state doc; reading the two line numbers the spec itself cited would
+have settled it in about thirty seconds.
+
+### T-30 — runbooks reviewed fourteen times
+
+Five runbooks took 14 review rounds, most findings in prose written *between* rounds
+rather than in the runbooks themselves.
+
+### T-31 — nine copies of an unscoped requirement
+
+One requirement was scoped to a single mode; nine further sentences still asserted the
+unscoped version. They were found one per round over eight rounds, until round 10
+grepped the *retired* phrasings instead of the reported line.
+
+### T-32 — one baseline patched, its sibling untested
+
+A fix patched one of two parallel baselines and left the other with no test at all.
+
+### T-33 — a correction that introduced a new false claim
+
+Correcting one prose description of a narrowed field introduced a new false claim in
+its replacement.
+

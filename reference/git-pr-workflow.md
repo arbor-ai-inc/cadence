@@ -94,7 +94,9 @@ Guidelines:
     the automated pass has settled, not before — otherwise a human reads a diff that
     is about to churn, and the second read is the one that gets skimmed.
 11. Respond to review with follow-up commits unless the reviewer asks for a
-    different history shape.
+    different history shape. **Before merge, re-run the suites with `main` merged in**:
+    two branches green on their own bases can be red composed, and no CI run sees the
+    composed state (`merge-order-composition-gap`, 5 times).
 12. After merge, switch to `main`, pull, prune, and delete local branches that
     are no longer needed.
 

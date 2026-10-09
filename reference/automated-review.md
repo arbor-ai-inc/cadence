@@ -115,6 +115,12 @@ the way a human's do. A reply that declines a finding leaves both in place.
 
 Anything else is "keep waiting", "resume the review", or "clear the block".
 
+**Check all three every round, not only part 1.** The review-state script reports the
+verdict, never individual findings or thread resolution, so a watch built on it alone
+misses a finding posted after your replies. Each round also run the enumeration queries
+in `code-review-and-quality` § *Working With Automated Reviewers*, and re-arm the watch
+after every push and reply.
+
 **Take the concern, not necessarily the patch: declining a finding with a stated reason
 is a legitimate terminal state for it; unaddressed and unanswered is not.**
 
@@ -149,6 +155,12 @@ the provider's **resolve** command that closes out a round's dispositions. So th
 *ordinary* sequence, not a misreading of it: fix, push, reply, resolve, then poll
 forever for a review nobody requested. **Ask every round.**
 
+**One push per fix round, and never while a review is running.** Fix or answer every
+finding in the round, get lint and tests green, then push once. A push inside a running
+review supersedes it: the result never posts and the allowance is spent. Nothing on the
+PR shows that, so ask the bot for its remaining allowance (the provider notes name a
+command that costs no attempt) rather than infer.
+
 **The rule, in one line: ask again whenever `action` is `ASK` — no verdict at head and
 no review in progress — on a 10-minute / 30-minute / hourly backoff.** This paragraph
 is where that is defined; everywhere else points here.
@@ -161,7 +173,8 @@ is where that is defined; everywhere else points here.
   verdict-bearing review whose `submitted_at` post-dates your last ask is the same
   evidence arriving later** — the script has no ask timestamp, so that comparison is
   yours to make.
-- **A stated refill is a cadence hint, never a deadline.** It is org-wide, so another
+- **A stated refill is a cadence hint, never a deadline.** It is per developer
+  across all your PRs (and shared by every PR under a shared bot identity), so another
   PR can take your refill and the number can grow while you wait; a *derived* refill
   ("last review + one hour") is wrong by construction. Ask ~90s **after** a stated
   window rather than before it, and re-read the notice each round — the bot edits it in
