@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -19,6 +21,16 @@ jobs:
       # signal rather than one red line among many.
       - name: no leaks from the private source tree
         run: python3 tests/check_no_leaks.py
+
+      # Every commit must descend from this repository's root commit. A branch
+      # carrying unrelated history is refused rather than merged.
+      - name: single history
+        run: |
+          roots="$(git rev-list --max-parents=0 HEAD)"
+          if [ "$roots" != "5d4187e1d05edbddbd3f791196723d70d94fa842" ]; then
+            echo "This branch carries history unrelated to this repository. Clone it fresh and copy your changes over." >&2
+            exit 1
+          fi
 
       # The derived-name check needs the private repos, which CI does not have;
       # it runs on a maintainer's machine. CI proves only that it works.
