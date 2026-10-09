@@ -75,6 +75,11 @@ jobs:
       - name: adapters stay thin and links resolve
         run: python3 tests/check_agent_skills.py
 
+      - name: reference docs stay within their size budget
+        run: |
+          python3 tests/check_doc_budget.py --selftest
+          python3 tests/check_doc_budget.py
+
       - name: generated codex adapters are fresh
         run: python3 scripts/gen_adapters.py --check
 

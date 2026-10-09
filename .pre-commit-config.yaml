@@ -76,6 +76,14 @@ repos:
         pass_filenames: false
         files: ^(reference/.*|skills/.*|agents/.*|adapters/.*|templates/.*|tests/check_agent_skills\.py)$
 
+      - id: doc-budget
+        name: doc-budget
+        description: Every reference doc stays within its byte budget in tests/doc_budget.json.
+        entry: python3 tests/check_doc_budget.py
+        language: system
+        pass_filenames: false
+        files: ^(reference/.*|tests/doc_budget\.json|tests/check_doc_budget\.py)$
+
       - id: install
         name: install
         description: >
