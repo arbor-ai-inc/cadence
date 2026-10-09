@@ -34,6 +34,11 @@ writer produced the tree.
 
 ## When To Use
 
+**Only when the project sets `[fanout].enabled = true`.** Fan-out is off by default:
+then a one-way decision is asked with a Shape A brief, and `fanout.py` refuses `init`
+and `fork` with exit 3. Turning it on is a project's choice to have unattended runs
+build options rather than wait for an answer.
+
 - During [`execute-issue`](./execute-issue.md) implementation, when a decision
   with more than one defensible answer blocks progress.
 - When the author is unavailable and the alternative is a run that stalls until

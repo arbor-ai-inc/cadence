@@ -146,6 +146,23 @@ def set_config(cfg):
     _CONFIG = cfg
 
 
+def refuse_if_disabled():
+    """Exit 3 unless the project turned fan-out on.
+
+    Off is the default, and the workflow docs route a one-way decision to a
+    question when it is off. This is the backstop for a run that calls the tool
+    anyway: the refusal names the switch, so nobody mistakes it for a cap.
+    """
+    if config().fanout_enabled:
+        return None
+    print(
+        "fanout: REFUSED: fan-out is off for this project ([fanout].enabled = false "
+        "in cadence.toml, the default). Ask the author instead.",
+        file=sys.stderr,
+    )
+    return 3
+
+
 def must_stop_hits(paths):
     """Which given repo-relative paths fall inside the must-stop boundary.
 
@@ -451,6 +468,8 @@ def parse_pairs(values, field_count, what):
 
 def cmd_init(args):
     root = repo_root()
+    if (refused := refuse_if_disabled()) is not None:
+        return refused
     path = state_path(root, args.issue)
     if path.exists() and not args.force:
         die(f"{rel(root, path)} already exists; use --force to start over")
@@ -545,6 +564,8 @@ def cmd_init(args):
 
 def cmd_fork(args):
     root = repo_root()
+    if (refused := refuse_if_disabled()) is not None:
+        return refused
     with state_lock(root, args.issue):
         state = load(root, args.issue)
         caps = state["caps"]
