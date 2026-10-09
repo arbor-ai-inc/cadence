@@ -467,7 +467,7 @@ class TestEvidence(FanoutCase):
                 "--if-silent", "nothing ships; the tree waits")
         self.ok("ledger", ISSUE)
         text = (self.repo / STATE_DIR / "fanout" / "xx-999" / "LEDGER.md").read_text()
-        # Shape A: the brief a human decides from (`human-brief`, PR #NNN).
+        # Shape A: the brief a human decides from (`human-brief`, PR X).
         self.assertIn("**DECISION:**", text)
         self.assertIn("**WHY YOU:**", text)
         self.assertIn("| Option | In plain English | What you would notice |", text)

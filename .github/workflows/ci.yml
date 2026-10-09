@@ -20,6 +20,11 @@ jobs:
       - name: no leaks from the private source tree
         run: python3 tests/check_no_leaks.py
 
+      # The derived-name check needs the private repos, which CI does not have;
+      # it runs on a maintainer's machine. CI proves only that it works.
+      - name: derived-name check self-test
+        run: python3 tests/check_vocab.py --selftest
+
       - name: version bumped when content ships
         run: |
           git fetch --depth=2 origin "${{ github.base_ref || 'main' }}" || true

@@ -107,8 +107,8 @@ advertiser or publisher would see:
   signal, one meaning: if a counter can be reached by two conditions, ask which one the
   operator is meant to conclude (T-02).
 
-Check the actual chain: `schema.yaml` event types → the `events_table` payload
-→ the `rollup_table` dimensions → the read API. A dimension added at one
+Check the actual chain: the event schema's types → the stored event payload → the
+reporting rollup's dimensions → the read API. A dimension added at one
 layer and missing at the next is the common defect.
 
 **3. Can the customer reach it?** (principle #14) A capability only behind an API, with

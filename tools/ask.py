@@ -104,7 +104,7 @@ def _slack_channel() -> str:
     return channel
 
 
-def slack_ask(text: str, timeout: int) -> int:
+def ask_slack(text: str, timeout: int) -> int:
     channel = _slack_channel()
     posted = _slack_call("chat.postMessage", {"channel": channel, "text": text})
     thread_ts = posted["ts"]
@@ -216,7 +216,7 @@ def main(argv=None) -> int:
         return EXIT_OK
 
     if cfg.ask_provider == "slack":
-        return slack_ask(text, timeout)
+        return ask_slack(text, timeout)
     if cfg.ask_provider == "stdout":
         return stdout_ask(text)
     return harness_ask(text)

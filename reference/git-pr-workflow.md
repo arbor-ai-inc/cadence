@@ -35,8 +35,8 @@ Prefer branch names that identify the owner and work:
 Examples:
 
 ```text
-dev/xx-5-agent-skill-presubmit
-dev/xx-5-git-pr-workflow
+alex/xx-5-agent-skill-presubmit
+alex/xx-5-git-pr-workflow
 codex/update-reporting-tests
 ```
 
@@ -59,7 +59,7 @@ Guidelines:
    For `the API package`, run `ruff format` and `ruff check` yourself: the CI
    `pre-commit` job runs them with `--all-files`, and local git hooks are not
    guaranteed to be installed, so a format-only miss fails CI rather than your
-   commit (T-21 #NNN).
+   commit (T-21 PR U).
 6. **Adversarial review BEFORE the PR exists**, for anything non-trivial — run
    [`code-review`](./code-review.md) and drive it to LGTM or its 3-round circuit
    breaker. Reviewer must be a context that did not write the code. This is the
@@ -238,7 +238,7 @@ names the exact case that breaks below.
 
 **Squash-only means intra-branch commit boundaries do not reach `main`.** Splitting a
 formatter pass into its own commit on the branch is good practice for the reviewer and
-buys nothing durable: the squash collapses it. #NNN carried three — `fix(offline):
+buys nothing durable: the squash collapses it. PR S carried three — `fix(offline):
 remove dead imports`, `style(offline): apply ruff format`, `build(lint): bring
 the offline jobs package under ruff` — and landed as the single commit `5560de1f`. An AST check
 run against the style commit reports 0 structural diffs; run against what actually

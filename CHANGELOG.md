@@ -11,12 +11,23 @@ tagged `v<version>`.
   is user-visible.
 - **Split designs.** A large design is an HLD plus `design/` sub-designs; `spec_hash.py
   design` hashes them together.
+- `check_vocab.py` also scans files not yet added, and its own docstring no longer
+  names the source project's files.
 - **Testing plans and `test-authoring`.** New workflow and `_testing_plan_template.md`
   for tests above unit level. `testing-plan.md` sits outside the design hash; rows are
   never deleted after the gate.
 - **Cross-artifact pass.** Before the design PR, each artifact pair is checked and the
   result committed in `review/cross-check.md`.
-- Case write-ups no longer name the source project's specs.
+## 0.8.1
+
+- **Scrubbed the source project's names** from the docs, case studies and tests: spec
+  names, PR numbers, branch names, file and table names. Wording changed; no rule did.
+- **`tests/check_vocab.py`:** fails if a name from a private repo appears in cadence.
+  The list is derived at run time from the repos you point it at and never stored.
+- **`check_no_leaks.py`** stores private names as digests (`--hash NAME` adds one), and
+  matches issue ids in any case.
+- `code-review` and `spec-pipeline` name cadence's `tools/ask.py`, not a source-project
+  script.
 
 ## 0.8.0
 

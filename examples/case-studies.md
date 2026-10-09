@@ -253,7 +253,7 @@ passed that very command, because every flag was valid and the wrong thing was t
 *default*.
 
 ### T-10 — a write-time decision enforced only on read
-`scanner.py` cited **D-U — reject where the author is** — as its whole reason for
+A scanner cited **D-U — reject where the author is** — as its whole reason for
 existing, and every call site was a **read**. A `<script>` could be stored and was
 refused only when someone tried to look at it, the opposite of what the citation says.
 
@@ -314,7 +314,7 @@ fix, are what surfaced every one of these. Both times the circuit breaker fired,
 final findings were mechanical enough to fix with confidence.
 
 ### code-review — the formatter commit, before and after squash
-#NNN's formatter commit alone was 35 files, 33 AST-identical, 0 structural. The same PR
+PR S's formatter commit alone was 35 files, 33 AST-identical, 0 structural. The same PR
 *as squash-merged* reports 7 of 36 structurally different, because a sibling `fix:`
 commit removed dead imports in the same squash — and the merged commit is the obvious
 thing to reach for. Those 35 files carry 48 `# noqa` across 13 files, several the
@@ -334,7 +334,7 @@ A reviewer on the change that introduced this rule asserted that
 disproved it.
 
 ### code-review — a correct diagnosis with a wrong prescription
-Both of #NNN's substantive findings were like this. Its major one — an unauthenticated
+Both of PR V's substantive findings were like this. Its major one — an unauthenticated
 `PATCH` can replace a live `api_key` — was accurate, but the prescribed fix (strip
 `api_key` from `body.model_dump()`) would have made the console's blank-key repair
 return `200` while changing nothing, silently. Its migration finding cited a real
@@ -427,7 +427,7 @@ three files; the render-time-DOM shape let a real defect reach review.
 
 ### test-driven-development — a rule the harness could not reach
 A browser-facing package with no DOM or React harness — `npm test` is bare
-`node --test` — so a rule inside an event handler is unmutatable by construction. #NNN's
+`node --test` — so a rule inside an event handler is unmutatable by construction. PR V's
 confirm gate lived in `handleSubmit`; deleting its create-only clause, dropping a
 `.trim()`, and inverting its comparison all left the suite green. It became a pure
 predicate in `lib/`, and all three mutations then failed by name. That predicate then

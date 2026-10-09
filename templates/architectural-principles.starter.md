@@ -198,7 +198,7 @@ the system can evolve without a full rewrite.
   per-format billing gates because "format" was the unit in hand — but nothing
   about billing varies by format (serving a `chat` unit and a `quote` unit raise
   the identical question), and what actually varied was **environment** and
-  **account**. Caught in human review on #NNN; recorded as a binding decision. The tell is a
+  **account**. Caught in human review on PR W; recorded as a binding decision. The tell is a
   control that must be re-decided identically for every new instance of the
   subsystem.
 
@@ -497,8 +497,8 @@ freshness explicit.
   the derived data rebuildable, and is its freshness (staleness window) explicit?
   Conversely — does the design **materialize** a value it could derive cheaply,
   and if so, what measured read cost justifies the column?
-- **Violation:** computing per-campaign aggregates by joining creatives →
-  order_lines → campaigns on every reporting page load, instead of
+- **Violation:** computing per-customer totals by joining order lines →
+  orders → customers on every reporting page load, instead of
   precomputing/denormalizing them onto the rollup.
 - **Violation (converse):** storing a column whose value is a subtraction of two
   columns beside it, with no measured read cost to justify it — paying a column,

@@ -14,6 +14,16 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: vocab
+        name: vocab
+        description: >
+          Fail if a name from a private repo appears here. Derives its list from
+          the repos in CADENCE_PRIVATE_SOURCES; skips when that is unset.
+        entry: python3 tests/check_vocab.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: cadence-config
         name: cadence-config
         description: The config loader and the must-stop matcher are load-bearing for every workflow.
