@@ -61,17 +61,19 @@ principles (Gate 2) to produce a DESIGN_READY, decomposition-bearing spec.
 
 ## Spec File Structure
 
-Specs live in a per-slug directory `<[paths].specs>/<slug>/` with two artifacts, one per
-gate:
+Specs live in a per-slug directory `<[paths].specs>/<slug>/`:
 
-- **`<[paths].specs>/<slug>/product.md`** — Product Spec: problem, user, requirements
-  (user-verifiable), success metrics, non-goals. Author input; the Gate 1
-  artifact. Follows `templates/_product_template.md`.
-- **`<[paths].specs>/<slug>/design.md`** — Engineering Design: architecture (including what
-  it reuses and why any new component is needed), principles adherence, acceptance
-  criteria, task decomposition, deferred scope, edge cases, invariants.
-  Drafted by the pipeline; the Gate 2 artifact. Follows
-  `templates/_design_template.md`.
+- **`<[paths].specs>/<slug>/product.md`** — Product Spec: problem, user, expected
+  scale, requirements (user-verifiable), success metrics, non-goals. Author input;
+  the Gate 1 artifact. Follows `templates/_product_template.md`.
+- **`<[paths].specs>/<slug>/design.md`** — Engineering Design, drafted by the
+  pipeline; the Gate 2 artifact. Follows `templates/_design_template.md`, which
+  owns the section set and the length. A design the template says to split becomes
+  an HLD plus sub-designs under `<slug>/design/`, **one Gate 2 artifact**: reviewed
+  in the same round, edited by the same editor, committed on the same design PR.
+- **`<[paths].specs>/<slug>/testing-plan.md`** — the tests and manual checks that
+  prove the spec. Drafted with the design and reviewed at Gate 2, but outside
+  `design_hash`; defined in [`test-authoring`](./test-authoring.md) § *From a spec*.
 
 The slug is chosen once, by whatever entry point drafts `product.md`. A spec
 whose deliverable lives under one of the project's exploratory trees carries the
@@ -81,6 +83,13 @@ the prefix is part of the slug, and the pipeline never inspects it.
 Before Gate 1 issues PRODUCT_READY, `design.md` does not yet exist (or contains
 only the `<!-- TODO -->` marker from the template). Its absence signals the
 spec is at the product gate.
+
+**A spec is design-only when it has no `product.md` and no user-verifiable
+requirement** — nothing a customer could see, be billed for, or complain about: a
+refactor, a migration, an infra change. Both conditions: on user-visible work a
+missing `product.md` is unwritten. Design-only starts at Gate 2; the design's
+*Goals, Non-goals & Requirements* carries the Rn and states why no product gate
+is needed — a claim Gate 2 grades.
 
 **Keep each artifact to its own job.** `product.md` targets ≤150 lines and carries
 no implementation detail, no per-claim `file:line` evidence, and no justification or
@@ -117,7 +126,9 @@ and the review artifacts.
    - **Gate 1 (product)** while `design.md` is absent / `<!-- TODO -->`:
      the `product-spec-reviewer` reviews `product.md`.
    - **Gate 2 (design)** after PRODUCT_READY: the `eng-design-reviewer`
-     reviews `design.md` against the `[paths].principles` rubric.
+     reviews the design artifact against the `[paths].principles` rubric, and
+     `testing-plan.md` against the spec: are these the tests that would catch
+     the feature failing?
    - If NOT_READY: the editor resolves all `decision: mechanical` items
      automatically **in one pass covering every blocker in the round**, then
      pauses once per round to present `decision: author`
@@ -141,8 +152,8 @@ and the review artifacts.
      Gate 2: the drafter (gated on `product.md` being on `main`) writes
      `design.md` (including its Principles adherence section), and review
      continues.
-   - On **DESIGN_READY**: the pipeline **stops editing `design.md`** and opens the
-     **design PR** (`spec(design): <slug>`) carrying `design.md`, its Gate 2
+   - On **DESIGN_READY**: the pipeline **stops editing** and opens the
+     **design PR** (`spec(design): <slug>`) carrying the artifact, its Gate 2
      rounds, and `ack-round-N.md`. That file records the decomposition, the
      advisory open items, and the cumulative mechanical-edit changelog **as a
      Shape B change brief** (`human-brief`,
@@ -178,17 +189,18 @@ load-bearing rule: **product-gate closure is a merged PR, not just a verdict.**
   `gate: product`) + `carried-advisories.md` to a branch and opens a PR titled
   `spec(product): <slug>`,
   then **stops**. The author reviews, approves, and **merges** it — the
-  pipeline never self-merges. Gate 2 is blocked until this PR lands on `main`.
+  pipeline never self-merges. Gate 2 is blocked until this PR lands on `main`
+  (a design-only spec has no product PR).
   Advisory review comments on this PR are recorded, not applied; an artifact edit
   pushed here reopens Gate 1 and needs a fresh full round before merge (see
   [Editing on a gate PR](#editing-on-a-gate-pr)).
 - **Design PR (Gate 2 closure).** On DESIGN_READY the pipeline commits `design.md`
-  + its Gate 2 rounds + `carried-advisories.md` + `ack-round-N.md` to a branch and
+  + any sub-designs and `testing-plan.md` + its Gate 2 rounds + `carried-advisories.md` + `ack-round-N.md` to a branch and
   opens a PR titled
   `spec(design): <slug>`, then **stops** for author review + merge. **Approving
   this PR is the changelog acknowledgment** (see
   [Acknowledgment](#acknowledgment)). Advisory review comments here are recorded,
-  not applied; editing `design.md` on this PR reopens Gate 2 and needs a fresh
+  not applied; editing `design.md` or a sub-design on this PR reopens Gate 2 and needs a fresh
   full round before merge — and it also invalidates the ack, whose
   changelog described a different artifact (see
   [Editing on a gate PR](#editing-on-a-gate-pr)). The decomposition is filed to
@@ -240,10 +252,23 @@ design is drafted — so a product-intent disagreement is caught and resolved on
 its own PR, not tangled into a design review. The design PR then reviews *how*
 against a product spec that is already settled on `main`.
 
-**Drafter gate (reinforced).** The drafter refuses to write `design.md` unless
-`product.md` is present on `main` (the product PR merged) **and** the most
-recent Gate 1 PRODUCT_READY verdict's `product_hash` matches it (see
+**Drafter gate (reinforced).** Where the spec has a `product.md`, the drafter
+refuses to write `design.md` unless it is on `main` (the product PR merged)
+**and** the most recent PRODUCT_READY verdict's `product_hash` matches it (see
 [Hash Gates](#hash-gates)). Merged-but-then-edited `product.md` re-opens Gate 1.
+
+### Reviewing a gate PR
+
+What a human adds is what no gate's rubric asks:
+
+- **Read `review/round-*.md`**, front matter first; a PR bot may skip them.
+- **Product PR: re-read each Rn for a *how*** — nothing does after Gate 1, and
+  Gate 2 must meet the Rn as written. Could a design meet it another way? Ask too
+  whether each Rn should exist; Gate 1 checks form, not warrant.
+- **Design PR:** walk one concrete scenario through it, and check what it touches
+  outside the spec — a component called "unchanged" is one nobody reviewed. When
+  a per-entity setting governs a shared resource, ask whose value wins. A
+  trade-off you doubt is yours to weigh; withholding approval is the lever.
 
 ## Review Requirements
 
@@ -263,9 +288,9 @@ principle (by number, from the `[paths].principles` rubric) and quote the design
 text that breaches it — and it is a BLOCKER unless `design.md` already records a
 justified trade-off, in which case it is at most a MAJOR (see Verdicts).
 
-**Cross-plane endpoints are a standing Gate 2 question.** If §1 *Architecture*
-names any route, RPC, or topic, the reviewer establishes whether it crosses a
-plane edge before grading anything else about it — a design that adds an edge
+**Cross-boundary endpoints are a standing Gate 2 question.** If the design names
+a route, RPC, or topic, the reviewer establishes whether it crosses a
+boundary before grading anything else about it — a design that adds an edge
 without saying so has skipped an architectural decision, not a formatting step.
 When it is a new edge, the design must name the direction, the producer, the
 consumer, what pins the payload shape, and the doc set that will change with it
@@ -275,7 +300,7 @@ not left to inference. Silence here is a BLOCKER; the decomposition that follows
 will otherwise land the endpoint with no doc task attached to it.
 
 **A new internal component must say why existing infrastructure cannot serve it.**
-§1 *Architecture* carries a **Reuses** line and, for every NEW internal component,
+The design carries a **Reuses** line and, for every NEW internal component,
 abstraction, table or service, one line on the existing thing considered and why it
 does not fit. Silence is a BLOCKER (#4 / #6 / #12) — an abstraction that arrives
 without a reason is the over-engineering failure the principles doc calls out as
@@ -284,19 +309,19 @@ reviewer may record an advisory MAJOR against reasoning it doubts, but not a blo
 and the design PR reviewer weighs whether it holds. This is deliberately the same
 grading as a stated principle trade-off — the gate checks that the decision was made
 and written down, not that it was the best one. When the reason is already evident
-elsewhere in the design, the finding is `decision: mechanical` (surface it in §1);
+elsewhere in the design, the finding is `decision: mechanical` (surface it there);
 when it is genuinely absent, it is `decision: author` — the editor must not invent an
 architectural justification, which would be originating a judgment.
 
-**Requirements a test cannot prove need a named validation plan, not a soft AC.** §5
-stays machine-checkable, and every Rn must map to an AC **or** to a §5 *Validation
+**Requirements a test cannot prove need a named validation plan, not a soft AC.** ACs
+stay machine-checkable, and every Rn must map to an AC **or** to a *Validation
 plan* entry that says how it will be validated and why no test or command can prove
 it. An Rn with neither is a BLOCKER; so is a validation-plan entry for something a
 test could have covered, which is the escape hatch this slot would otherwise open.
 
-**Deferred scope is a decision, not a gap.** §8 *Deferred* bounds the build the way
+**Deferred scope is a decision, not a gap.** § *Deferred* bounds the build the way
 `product.md` § *Non-goals* bounds the product, so the reviewer raises no finding for
-a capability §8 defers. The one exception: an entry covering a stated requirement
+a capability it defers. The one exception: an entry covering a stated requirement
 (Rn) is a BLOCKER — a design cannot defer what the product spec requires, so either
 the design absorbs it or `product.md` changes and Gate 1 re-opens.
 
@@ -365,7 +390,7 @@ spec: specs/<slug>/           # the spec directory
 round: N
 gate: product | design
 verdict: PRODUCT_READY | DESIGN_READY | NOT_READY
-product_hash:
+product_hash:                 # null on a design-only spec
 design_hash:                  # omit / null at Gate 1
 blockers:
 majors:
@@ -394,7 +419,9 @@ subagent) and passed in — see Hash Gates.
   (including zero unjustified principle violations) AND a successful
   decomposition dry-run (every task has independent acceptance criteria,
   declared dependencies, and single-session scope — one PR, no context
-  compaction).
+  compaction; where `test-authoring.md` § *From a spec* applies, every AC has
+  a task named for its test, and the inventory and E2E/smoke work is owned or
+  marked not needed, with the reason).
 - **NOT_READY**: one or more unresolved blockers.
 
 Open majors and minors are advisory and do not block any verdict. A principle
@@ -506,6 +533,17 @@ obstacle to the next gate, or whether the residue is next-gate material. **"Clos
 gate" is a legitimate and useful output**, and at zero blockers it is usually the
 correct one.
 
+### Gate-specific reviews do not read across the boundary
+
+Each gate takes the other's artifact as given, so **a promise the design quietly
+narrows, or an obligation in a file no gate opens, is invisible to both**
+([`T-34`](../examples/case-studies.md#t-34--both-gates-closed-the-seams-unread)).
+**Before a design gate closes, one pass reads every Rn and success metric against
+the AC claiming to prove it**: does it prove the sentence *as written*, or a weaker
+one? Weaker reopens Gate 1 before the design PR opens. The pass also checks every
+obligation lives in `product.md`, the design artifact or `carried-advisories.md`,
+AC coverage runs both ways, and every task carries an AC.
+
 ### Batch blocker fixes
 
 Fix every blocker in a round in **one** editor pass, then re-review once.
@@ -522,8 +560,8 @@ open at gate close gets an explicit disposition, and "silently dropped" is not o
 them.**
 
 The record is `<[paths].specs>/<slug>/review/carried-advisories.md`, written when the gate closes and shipped
-in the gate's PR beside the round files. It costs nothing in hash terms: `spec_hash.py`
-hashes `product.md` / `design.md` only, never the review directory, so adding this file
+in the gate's PR beside the round files. It costs nothing in hash terms: the gate
+hashes spec artifacts only, never the review directory, so adding this file
 cannot disturb a verdict.
 
 `spec-a` invented the idea, and its file is the **ancestor, not the
@@ -597,9 +635,6 @@ reviewed, and Gate 2 blocks on a hash that no round matches.
   record whose gate, verdict, source round or hash belongs to the previous closure.
   Otherwise the PR merges carrying dispositions for bytes nobody closed, which reads
   as a completed disposition step and is not one.
-- **Never re-point a hash to cover a post-verdict edit.** A verdict names the bytes it
-  read. Editing the bytes and moving the hash to match is not a confirmation — it is
-  an unreviewed change wearing a verdict's front matter.
 
 ## Carry-Forward
 
@@ -625,12 +660,13 @@ Two hashes gate the pipeline. Both are computed with
 
 - **product_hash**: whole-file hash of `product.md`
   (`spec_hash.py spec specs/<slug>/product.md`). Freezes the Gate 1 input.
-- **design_hash**: whole-file hash of `design.md`
-  (`spec_hash.py spec specs/<slug>/design.md`). Drives skip-unchanged
-  re-reviews at Gate 2.
+- **design_hash**: the whole Gate 2 artifact — `design.md` plus every committed
+  file under `design/` (`spec_hash.py design specs/<slug>/design.md`). An
+  unsplit design gives the same digest as `spec` mode. **A sub-design edit
+  re-opens Gate 2 exactly as a `design.md` edit does.**
 
-The **drafter gate**: the drafter checks that (a) `product.md` is present on
-`main` — i.e. the product PR has merged (see [PR Gates](#pr-gates)) — and
+The **drafter gate** (a spec with a `product.md` only): the drafter checks that
+(a) it is present on `main` — i.e. the product PR has merged (see [PR Gates](#pr-gates)) — and
 (b) the most recent Gate 1 PRODUCT_READY verdict's `product_hash` matches the
 current `product.md`. A product edit after the verdict invalidates the gate and
 re-opens Gate 1; an unmerged product PR blocks the drafter outright. An
@@ -660,7 +696,8 @@ rounds accumulate without either mechanism stopping them.
   to sanity-check feasibility. Runs the Gate 1 (product) passes and writes
   round files. Reviews product intent only — never architecture. Never
   modifies the spec. Tools: Read, Grep, Glob, Write.
-- **eng-design-reviewer**: reads `design.md`, the PRODUCT_READY `product.md`,
+- **eng-design-reviewer**: reads the design artifact (`design.md` and every
+  sub-design), `testing-plan.md`, the PRODUCT_READY `product.md`,
   **Gate 1's `<[paths].specs>/<slug>/review/carried-advisories.md`**,
   the `[paths].principles` rubric, and the codebase. Every advisory that file
   dispositions as a *next-gate acceptance criterion* is Gate 2 input: check the
@@ -672,18 +709,18 @@ rounds accumulate without either mechanism stopping them.
   files. Never modifies the spec.
   Tools: Read, Grep, Glob, Write.
 - **editor** (`spec-editor`): applies mechanical resolutions and author
-  decisions to `product.md` / `design.md`. Never originates review judgments.
+  decisions to `product.md` / the design artifact / `testing-plan.md`. Never
+  originates review judgments.
   Tools: Read, Grep, Glob, Edit, Write.
-- **drafter**: reads `product.md`, **Gate 1's `<[paths].specs>/<slug>/review/carried-advisories.md`** (its next-gate-criterion entries are
+- **drafter**: reads `product.md` (design-only: the request that prompted the work), **Gate 1's `<[paths].specs>/<slug>/review/carried-advisories.md`** (its next-gate-criterion entries are
   requirements on the design, not background), the `[paths].principles` rubric, and the
-  codebase, and writes `design.md` (including its Principles adherence
-  section). Gated by the product PR being merged to `main`, the PRODUCT_READY
+  codebase, and writes the design artifact and `testing-plan.md`. With a
+  `product.md`, gated by the product PR being merged to `main`, the PRODUCT_READY
   verdict, and a matching product_hash (see the drafter gate under
-  [Hash Gates](#hash-gates)). Pinned to `fable` in
-  `${CLAUDE_PLUGIN_ROOT}/skills/draft-plan/SKILL.md`, with the rest of the pipeline: the drafter
+  [Hash Gates](#hash-gates)). The drafter
   reads `product.md`, the principles, and up to 30 grounding files, so it is the
-  step least served by inheriting whatever model the session happens to hold.
-  The pin binds the invoking turn only, like every skill pin — see § *Model pins*.
+  step least served by whatever model the session happens to hold; see § *Which
+  model runs this*.
 
 ## Which model runs this
 

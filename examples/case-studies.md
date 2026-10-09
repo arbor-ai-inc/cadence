@@ -187,8 +187,9 @@ an explicit title and an explicit body file, and forbids the fill flag.
 The full write-ups behind the one-line citations in
 [`reference/code-review.md`](../reference/code-review.md),
 [`reference/code-review-and-quality.md`](../reference/code-review-and-quality.md),
-[`reference/test-driven-development.md`](../reference/test-driven-development.md) and
-[`reference/execute-issue.md`](../reference/execute-issue.md). The docs keep the rule
+[`reference/test-driven-development.md`](../reference/test-driven-development.md),
+[`reference/execute-issue.md`](../reference/execute-issue.md) and
+[`reference/spec-pipeline.md`](../reference/spec-pipeline.md). The docs keep the rule
 and the id; the wording and numbers live here. Cases with no ticket id are headed by
 the doc that cites them.
 
@@ -546,3 +547,15 @@ A fix patched one of two parallel baselines and left the other with no test at a
 Correcting one prose description of a narrowed field introduced a new false claim in
 its replacement.
 
+
+### T-34 — both gates closed, the seams unread
+
+After both gates on one spec had closed and six automated review passes had run, a
+single human read found three blockers and two majors, none of them inside one
+document: the product spec promised an outcome the design delivered only in a weaker
+form, the design was silent on whose per-entity setting governed a shared limit, and a
+carried advisory's stated reason was contradicted by the artifact it described. Fixing
+one cost four more Gate 1 rounds. On another spec, a requirement that Gate 2 name a
+durable sink — load-bearing for four requirements and a metric — was written only
+into a supporting-analysis file neither gate reviews, so nothing carried it into Gate 2
+until an outside review noticed.
