@@ -1,6 +1,6 @@
 # Engineering Design: <FEATURE NAME>
 
-> Gate 2 artifact. Drafted by the pipeline (or `/cadence:spec`) from the
+> Gate 2 artifact. Drafted by the pipeline (or `/cadence:spec-pipeline`) from the
 > PRODUCT_READY `product.md` — or, on a design-only spec, from the request that
 > prompted it — using the rubric at `[paths].principles` as guardrails. The
 > eng-design-reviewer returns NOT_READY on unjustified principle violations,

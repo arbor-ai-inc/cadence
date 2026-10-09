@@ -20,14 +20,14 @@ artifact under one `design_hash`, reviewed, edited and committed together.
 **No product gate.** A refactor, migration or infra change with no
 user-verifiable requirement — nothing a customer could see, be billed for, or
 complain about — needs no `product.md` and no Gate 1. A missing `product.md` is
-not by itself the test. The input is then the request that prompted the work; the
+not by itself the test. The input is the request that prompted it; the
 design's *Goals, Non-goals & Requirements* carries the Rn and one line on why no
-product gate is needed, and Gate 2 grades that claim — a user-visible goal is a
-BLOCKER whose remedy is a `product.md`.
+product gate is needed. User-visible with no `product.md`: refuse; name it. Gate 2
+grades the claim; a user-visible goal is a BLOCKER fixed by a `product.md`.
 
 ## When To Use
 
-Drafting `design.md` in isolation; for the full loop use
+Drafting `design.md` alone; for the full loop use
 [spec-pipeline](./spec-pipeline.md).
 
 ## Workflow

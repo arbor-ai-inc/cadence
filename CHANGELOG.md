@@ -3,6 +3,21 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.9.0
+
+- **Design-only specs.** A change nothing a customer could see, be billed for, or
+  complain about may skip `product.md`; the design carries the Rn and why, and Gate 2
+  grades that claim (a user-visible goal is a BLOCKER). `draft-plan` refuses one that
+  is user-visible.
+- **Split designs.** A large design is an HLD plus `design/` sub-designs; `spec_hash.py
+  design` hashes them together.
+- **Testing plans and `test-authoring`.** New workflow and `_testing_plan_template.md`
+  for tests above unit level. `testing-plan.md` sits outside the design hash; rows are
+  never deleted after the gate.
+- **Cross-artifact pass.** Before the design PR, each artifact pair is checked and the
+  result committed in `review/cross-check.md`.
+- Case write-ups no longer name the source project's specs.
+
 ## 0.8.0
 
 - **Fan-out is now opt-in: `[fanout].enabled`, default `false`.** With it off, a

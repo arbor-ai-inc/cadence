@@ -409,7 +409,7 @@ each both delivered.
   that read as pending on the author.
 
 ### test-driven-development — mutation testing on one epic
-Measured on the spec-d epic: ~75 mutations across three tasks, all
+Measured on one epic: ~75 mutations across three tasks, all
 eventually killed, but **twelve initially survived, and every one was a test asserting
 less than it appeared to.** The "posts nothing" teardown shape occurred three times, in
 three files; the render-time-DOM shape let a real defect reach review.

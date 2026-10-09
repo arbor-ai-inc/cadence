@@ -81,7 +81,8 @@ lowering a priority needs a *Decisions* entry.
    one row. Then add a row for each *Edge Cases & Invariants* and *Risks* entry
    no AC covers, and for each path or caller the design names that an AC's test
    would miss. ACs are where tests start, not where they end.
-3. **Find the existing test.** Search for the AC id and what it names. Record the `file:line` of the assertion that proves the row, or `gap`.
+3. **Find the existing test.** Search for the AC id and what it names; AC ids repeat
+   across specs, so check a hit is this spec's. Record the `file:line` of the assertion that proves the row, or `gap`.
    A test that names the id but does not assert the row's outcome, or asserts an
    outcome the spec has since changed, is a `gap`. A found test reads **test
    found, not audited** until step 5 passes, then **covered (audited)**. Never

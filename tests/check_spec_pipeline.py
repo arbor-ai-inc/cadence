@@ -79,6 +79,16 @@ def check_spec_hash_design_mode(errors: list[str]) -> None:
 
         unsplit = run("design", design)
         plain = run("spec", design)
+
+        # Coverage is design/ only. testing-plan.md and product.md sit beside it,
+        # and every doc says the testing plan is outside design_hash.
+        for sibling in ("testing-plan.md", "product.md", "notes.md"):
+            (spec / sibling).write_text("# " + sibling + "\n", encoding="utf-8")
+        if run("design", design).stdout != unsplit.stdout:
+            errors.append(
+                "spec_hash: a file beside design/ (testing-plan.md, product.md) "
+                "must not move design_hash"
+            )
         if unsplit.stdout != plain.stdout:
             errors.append(
                 "spec_hash: design mode must reduce to spec mode with no "
@@ -227,6 +237,9 @@ DESIGN_ONLY_SITES = (
 )
 
 
+DESIGN_ONLY_DESCRIPTIONS = ("skills/draft-plan/SKILL.md", "adapters/codex/draft-plan/SKILL.md")
+
+
 def check_design_only_test(errors: list[str]) -> None:
     """Every site that mentions design-only must carry the literal test.
 
@@ -261,7 +274,12 @@ def check_design_only_test(errors: list[str]) -> None:
         # skill from it and can act on a looser rule before ever reading the
         # procedure beneath it. A body that carries the test does not cover this.
         match = re.search(r"^description:\s*(.+?)(?=^\w+:|^---)", text, re.M | re.S)
-        if match and re.search(r"ungated|design-only|no product gate", match.group(1)):
+        # The drafter's description decides eligibility, so it is checked whatever
+        # its wording; gating it on a trigger word would let it drop both. Other
+        # sites are checked when their description raises the subject at all.
+        decides = rel_path in DESIGN_ONLY_DESCRIPTIONS
+        if match and (decides or re.search(r"ungated|design-only|no product gate|with none",
+                                           match.group(1))):
             if not carries(match.group(1)):
                 errors.append(
                     f"{rel_path}: the frontmatter description states when the "
@@ -273,7 +291,7 @@ def check_design_only_test(errors: list[str]) -> None:
 def check_design_template(errors: list[str]) -> None:
     """The Gate 2 design template's section lists must match its own headings.
 
-    The drafter, the Gate 2 reviewer and `/spec` all key off the template's
+    The drafter, the Gate 2 reviewer and `/cadence:spec-pipeline` all key off the template's
     always-present / optional split. Nothing else reads this file, so a heading
     renamed on one side of it and not the other is invisible until a design is
     drafted against the drift — which is how three defects reached a second
@@ -356,11 +374,21 @@ def check_design_template(errors: list[str]) -> None:
                 f"to delete a section Gate 2 blocks on when it is absent"
             )
 
+    words = {14: "fourteen"}
+    reviewer = ROOT / "agents" / "eng-design-reviewer.md"
+    word = words.get(ALWAYS_PRESENT_COUNT)
+    if word is None or not re.search(rf"\b{word}\b", read(reviewer)):
+        errors.append(
+            f"{rel(reviewer)} must state the always-present count as "
+            f"'{word or ALWAYS_PRESENT_COUNT}' — it tells the reviewer how many "
+            f"absent sections are BLOCKERs. Update the word, or `words` here"
+        )
+
     if len(listed["always-present"]) != ALWAYS_PRESENT_COUNT:
         errors.append(
             f"{rel(DESIGN_TEMPLATE)}: {len(listed['always-present'])} always-present "
-            f"sections, but {rel(Path(__file__))}, the template and "
-            f"`agents/eng-design-reviewer.md` all say "
+            f"sections, but {rel(Path(__file__))} and "
+            f"`agents/eng-design-reviewer.md` say "
             f"{ALWAYS_PRESENT_COUNT}. Update all three or none"
         )
 
