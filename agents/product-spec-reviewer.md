@@ -46,7 +46,8 @@ user-verifiable, not implementation-prescriptive).
 6. **Buried questions** — any unresolved open question in the prose?
 7. **Brevity** — is the spec carrying implementation detail, per-claim `file:line`
    evidence, or justification/review-history prose? Each is a finding. See
-   `${CLAUDE_PLUGIN_ROOT}/templates/_product_template.md` § *Keep it short*.
+   the product template (`[paths].templates` or `${CLAUDE_PLUGIN_ROOT}/templates/`,
+   `_product_template.md`) § *Keep it short*.
 
 ## Demand falsifiability, not mechanism
 

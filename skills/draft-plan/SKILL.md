@@ -11,7 +11,7 @@ argument-hint: <specs>/<slug>/
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
-**Before anything else, check the model.** Run `python3 ${CLAUDE_PLUGIN_ROOT}/tools/cadence_config.py --json` and read `models_recommended`. If it is set and you are not running on it, **say so and stop** — name the model you are on, the one recommended, and how to switch (`/model <name>`, or `"model"` in `.claude/settings.json` to make it stick). Continue only if the author says to.
+**Before anything else, in Claude Code, check the model** (Codex: skip — pins are Claude model names). Run `python3 ${CLAUDE_PLUGIN_ROOT}/tools/cadence_config.py --json` and read `model_pins["draft-plan"]`, else `models_recommended`. Check again on every resume after a stop: a skill's pin lasts one turn. If one is set and you are not running on it, **say so and stop** — name the model you are on, the one recommended, and how to switch (`/model <name>`, or `"model"` in `.claude/settings.json` to make it stick). Continue only if the author says to.
 
 This is a real gate, not a formality. Cadence cannot switch models: a skill's `model:` pin covers only the turn that invoked it, and this workflow spans many turns because it stops to ask you things. So without this check the pipeline silently runs the first round on one model and everything after on another, and nothing reports it.
 
@@ -21,9 +21,9 @@ Follow the canonical procedure in `${CLAUDE_PLUGIN_ROOT}/reference/draft-plan.md
 
 **With a `product.md`, refuse to draft unless all three hold**, and say which one failed: the product PR has merged so `product.md` is on `main`; the most recent Gate 1 round is PRODUCT_READY; and that round's recorded `product_hash` matches the current `product.md` under `python3 ${CLAUDE_PLUGIN_ROOT}/tools/spec_hash.py`. A product edit since the verdict re-opens Gate 1.
 
-Write from `${CLAUDE_PLUGIN_ROOT}/templates/_design_template.md`, using `product.md` as input and the rubric at `[paths].principles` as guardrails. Size and shape it per the template's § *How to use this template*, which owns the figures: delete that block, classify the change in the executive summary, include an optional section only where it applies. Where it says to split, `design.md` is the HLD and each area gets `<specs>/<slug>/design/<area>.md`, indexed in *Sub-designs*; one `design_hash` covers all of them.
+Write from `_design_template.md` in `[paths].templates`, else `${CLAUDE_PLUGIN_ROOT}/templates/`, using `product.md` as input and the rubric at `[paths].principles` as guardrails. Size and shape it per the template's § *How to use this template*, which owns the figures: delete that block, classify the change in the executive summary, include an optional section only where it applies. Where it says to split, `design.md` is the HLD and each area gets `<specs>/<slug>/design/<area>.md`, indexed in *Sub-designs*; one `design_hash` covers all of them.
 
-Then draft `<specs>/<slug>/testing-plan.md` from `${CLAUDE_PLUGIN_ROOT}/templates/_testing_plan_template.md`, per `${CLAUDE_PLUGIN_ROOT}/reference/test-authoring.md` § *From a spec* (plan only), unless the design's *Test strategy* opts out.
+Then draft `<specs>/<slug>/testing-plan.md` from `_testing_plan_template.md` (same lookup), per `${CLAUDE_PLUGIN_ROOT}/reference/test-authoring.md` § *From a spec* (plan only), unless the design's *Test strategy* opts out.
 
 The **Principles adherence** section states, per engaged principle, how the design satisfies it or why a trade-off is justified. Only principles the design actually engages — a padded table is a checklist nobody reads.
 

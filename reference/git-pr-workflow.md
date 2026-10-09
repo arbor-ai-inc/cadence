@@ -19,63 +19,47 @@ committed.
 ## Repo Context To Load
 
 - Contribution and review expectations: `CONTRIBUTING.md` and
-  `docs/engineering/code-review.md`
-- Shared agent workflows: ``
+  `[paths].review_standards`
 - Current work context: the issue, ticket, user request, or spec
 - Existing branch and worktree state: `git status --short --branch`
 
 ## Branch Naming
 
-Prefer branch names that identify the owner and work:
-
-```text
-<owner>/<ticket-or-topic>
-```
-
-Examples:
-
-```text
-alex/xx-5-agent-skill-presubmit
-alex/xx-5-git-pr-workflow
-codex/update-reporting-tests
-```
-
-Guidelines:
+Name the branch per `[git].branch` where set (`cadence config` prints it); unset,
+`<owner>/<ticket-or-topic>`, e.g. `alex/xx-5-git-pr-workflow`.
 
 - Use the user's requested branch name when provided.
-- Use the ticket or project key when known.
-- Use lowercase words separated by hyphens.
-- Keep names descriptive enough to recognize in branch lists.
-- Codex-created branches may use `codex/<topic>` when the user does not
-  specify an owner or naming convention.
+- Use the ticket key when known; lowercase words separated by hyphens.
+- An agent with no owner given uses its own name as owner (`codex/<topic>`).
 
 ## Workflow
 
 1. Start clean: run `git status --short --branch`.
 2. Create or switch to the branch before editing.
 3. Keep the branch focused on one logical change.
-4. Commit related changes together with a concise imperative message.
+4. Commit related changes together (§ *Commit Guidance*).
 5. Run focused verification before pushing — including the linters CI enforces.
-   For `the API package`, run `ruff format` and `ruff check` yourself: the CI
-   `pre-commit` job runs them with `--all-files`, and local git hooks are not
-   guaranteed to be installed, so a format-only miss fails CI rather than your
-   commit (T-21 PR U).
+   Run the lint command (`[commands].lint`) yourself: CI may run it over all files,
+   and local git hooks are not guaranteed to be installed, so a format-only miss
+   fails CI rather than your commit (T-21 PR U).
 6. **Adversarial review BEFORE the PR exists**, for anything non-trivial — run
-   [`code-review`](./code-review.md) and drive it to LGTM or its 3-round circuit
+   [`code-review`](./code-review.md) and drive it to LGTM or its circuit
    breaker. Reviewer must be a context that did not write the code. This is the
    cheapest point to find a wrong boundary, and it is where the mutation check
    (§ Loop step 4) happens.
 7. Push the branch and create a PR, with a summary and verification section.
-8. **Watch the automated review and address it**, before involving anyone else.
-   Where `[review].provider` names a PR-time reviewer, it is normally configured as a blocking review and starts on its own. This step
-   is not complete when the PR exists — it is complete when the review has
-   *landed* and its findings are resolved or explicitly declined. See
+8. **Wait for CI and fix what it finds**, before involving anyone else, whatever
+   the reviewer. This step is not complete when the PR exists: every required check
+   must have **run and passed on the head commit** (`gh pr checks <n> --required`). A
+   check that never started is not a pass; a repo with no required checks says so. Where `[review].provider` names a PR-time reviewer,
+   the step also needs that review *landed* and its findings resolved or explicitly
+   declined. See
    [`automated-review`](./automated-review.md) for the terminal condition and the
    commands, and
    [`code-review-and-quality`](./code-review-and-quality.md) § *Working With
    Automated Reviewers* for how to judge a finding once you have it.
 9. **Write the retro fragment**: one file at
-   `docs/engineering/retros/pending/<issue-id>.md`, shaped by
+   `<[paths].retros>/pending/<issue-id>.md`, shaped by
    [`_fragment_template.md`](../templates/_fragment_template.md). It rides this PR, so a
    lesson costs no PR of its own. The slot is exact — after the automated review, so the
    fragment can cite the friction that review just surfaced, and before human reviewers,
@@ -110,11 +94,13 @@ settled. It is a separate doc so a project without a PR bot never loads it.
 
 ## Commit Guidance
 
-Commit messages should be short, imperative, and specific:
+Commit messages are short, imperative and specific, in `[git].commit_style` where
+set; unset, plain imperative:
 
 ```text
-Add shared agent skill workflows
-Add agent skill presubmit guard
+Add the agent skill presubmit guard                # imperative (default here)
+XX-5: add the agent skill presubmit guard          # issue-prefix
+feat(skills): add the agent skill presubmit guard  # conventional
 ```
 
 Avoid vague messages like:
@@ -130,7 +116,7 @@ metadata into the commit subject.
 
 ## PR Creation
 
-Every PR should include:
+Title it per `[git].pr_title` where set. Every PR should include:
 
 - Summary of what changed.
 - Verification performed.
@@ -193,8 +179,8 @@ there. Read it before assuming a PR needs an approval, or that it does not.
 - Ask for human review on architecture, security, data-contract, migration, or
   production-impacting changes. Also on **a change under `specs/**`** (correcting a design
   or product doc is a design decision, not an implementation detail) and on **a new
-  top-level folder** (the plane layout is settled, so a root directory is an architecture
-  decision — getting this wrong once cost a follow-up commit touching 13 files).
+  top-level folder** (a root directory is an architecture decision — getting this wrong
+  once cost a follow-up commit touching 13 files).
   **Add them at step 10** — after the automated review has settled and the retro
   fragment is written — so the human reads the diff that is actually being proposed.
   A retro PR is always in this set: it writes the guidance other agents then follow, so
@@ -207,32 +193,16 @@ there. Read it before assuming a PR needs an approval, or that it does not.
 
 ## Merge Strategy
 
-**This repo is squash-only. There is no strategy to choose.** `allow_squash_merge` is
-`true` and `allow_merge_commit` / `allow_rebase_merge` are both `false` — check all
-three, since two disabled strategies do not by themselves prove the third is on:
+**Check which strategies the repo allows; do not assume.** Check all three, since two
+disabled strategies do not by themselves prove the third is on:
 
 ```bash
 gh api repos/:owner/:repo --jq '{squash: .allow_squash_merge, merge_commit: .allow_merge_commit, rebase: .allow_rebase_merge}'
 ```
 
-That is by design, and the two `false` values are false for **different** reasons —
-worth knowing before you argue with either:
-
-- `allow_merge_commit: false` is **mechanically forced**. The active `Protect main`
-  ruleset requires linear history, and a merge commit has two parents; enabling the
-  method would publish a merge button the ruleset then rejects.
-- `allow_rebase_merge: false` is a **policy choice**. Rebase-merge is linear, so the
-  ruleset permits it; it is off because it replays every intermediate commit onto
-  `main`, defeating one-commit-per-logical-change, trivial per-PR revert, and clean
-  bisect.
-
-Policy is the project's decision log;
-mechanism, verification commands, and the revisit condition are
-the project's decision log.
-So the general advice —
-rebase-and-merge for a curated commit series, a merge commit to preserve topology
-for stacked work — describes options this repo does not offer, and the second one
-names the exact case that breaks below.
+A ruleset requiring linear history forces merge commits off (a merge commit has two
+parents). Rebase-merge off is a policy choice: it replays every intermediate commit
+onto `main`. The rest of this section applies to a **squash-only** repo.
 
 ### The PR is the unit of separation, not the commit
 
@@ -275,14 +245,12 @@ git switch main
 git pull
 git remote prune origin
 git branch -d <branch>
-find docs/engineering/retros/pending -maxdepth 1 -type f -name '*.md' | wc -l   # >= 15 -> /retro-synthesis
+find <[paths].retros>/pending -maxdepth 1 -type f -name '*.md' | wc -l   # >= 15 -> /retro-synthesis
 ```
 
 That last line is the whole trigger for [`retro-synthesis`](./retro-synthesis.md). At
 fifteen or more fragments, a batch has enough samples to tell a recurring trap from a
-one-off, which is the judgment no single ticket can make. `.github/workflows/hygiene.yml`
-runs the same count on every PR and warns at the threshold, so this is the local echo of
-a check that already fires.
+one-off, which is the judgment no single ticket can make.
 
 If a PR was squash merged, Git may not recognize the local branch as merged.
 Use `git branch -D <branch>` only after confirming the content is on `main`.

@@ -52,7 +52,7 @@ world, and no later gate can supply them — see § *Expected scale*.
 > Each requirement is an OBSERVABLE outcome, not an implementation instruction.
 > Number them R1, R2, … so the design and its acceptance criteria can reference
 > them.
-- **R1** <e.g. An authenticated advertiser sees only their own account's rows.>
+- **R1** <e.g. A signed-in customer sees only their own account's rows.>
 - **R2** <e.g. A duplicate event is counted exactly once.>
 
 ## Success metrics

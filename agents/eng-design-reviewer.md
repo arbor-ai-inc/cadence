@@ -37,7 +37,7 @@ so you review the design against the current system rather than a blank slate
 
    **Coverage is artifact-level; quality is per file.** On a split design the HLD
    carries the always-present set and a sub-design only the sections its boundary
-   needs (`${CLAUDE_PLUGIN_ROOT}/templates/_design_template.md` § *Splitting a
+   needs (the design template — `[paths].templates` or `${CLAUDE_PLUGIN_ROOT}/templates/`, `_design_template.md` § *Splitting a
    large design*). So:
    - **Is it there at all?** Ask of the artifact, and raise it against the HLD.
      Never fault a sub-design for not repeating the HLD — including a section's
@@ -121,9 +121,9 @@ with.
 4. **Cross-boundary endpoints.** If the design names a route, RPC, or topic anywhere, determine
    yourself — from the architecture docs, not the design's say-so — whether a
    component on the other side of a boundary calls it, then grade per the standing question in
-   `spec-pipeline.md` § *Review Requirements* and the checklist in
-   `architectural-principles.md` § *Cross-boundary endpoints*. Cite as
-   `#8 § Cross-boundary endpoints`.
+   `spec-pipeline.md` § *Review Requirements* and the rubric's cross-boundary
+   checklist, or its contract principle where it has no such section. Cite the
+   principle and section you graded against.
 5. **Acceptance criteria** — *coverage* is artifact-level (an Rn proven by an AC
    in a sub-design is covered); *quality* is graded in whichever file the AC is
    written. Each is verifiable by an automated test or a
@@ -207,7 +207,7 @@ Two things the limit does not do:
   Write the 3 most material out in full; give **every** other advisory a one-line
   entry — an id and one sentence naming the concern. Do not reduce them to a bare
   count: `spec-pipeline.md` § *Dispositioning the advisories* requires each one to be
-  dispositioned at gate close, and a the tracker follow-up must restate it well enough to
+  dispositioned at gate close, and a tracker follow-up must restate it well enough to
   act on months later. An advisory you counted but never wrote down cannot be
   dispositioned or filed. `blockers: 0` with `majors: 20` is also a signal a human
   needs, and capping the number would hide it.
@@ -218,7 +218,7 @@ next-gate material. "Zero findings; close the gate" is a complete, correct, and
 expected round.
 
 When you do emit a finding at zero blockers, say which disposition you think it
-wants — a next-gate acceptance criterion, a PR comment, or a the tracker follow-up issue —
+wants — a next-gate acceptance criterion, a PR comment, or a tracker follow-up issue —
 because that is what happens to it now that the artifact is frozen. See
 `spec-pipeline.md` § *Closing A Gate* and § *Dispositioning the advisories*.
 

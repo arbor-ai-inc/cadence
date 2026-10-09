@@ -1,14 +1,16 @@
 ---
 name: execute-issue
 description: >
-  Use when picking up a the tracker issue (e.g. T-31) to implement autonomously:
+  Use when picking up a tracker issue (e.g. T-31) to implement autonomously:
   branch, build, ask via the ask transport when blocked, review, open PR. Never merges.
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash, Task
 ---
 
+**In Claude Code, check the model first, and again on every resume after a stop** (Codex: skip). Read `model_pins["execute-issue"]` from `python3 ${CLAUDE_PLUGIN_ROOT}/tools/cadence_config.py --json`; if it is set and you are not running on it, say so and stop — name both models and how to switch (`/model <name>`). Continue only if the author says to. Unset: no check.
+
 Follow the canonical procedure in `${CLAUDE_PLUGIN_ROOT}/reference/execute-issue.md` exactly.
 
-Branch = lowercased issue id off fresh main. Implement only the issue's scope.
+Branch off fresh main, named per `[git].branch` (default: the lowercased issue id). Implement only the issue's scope.
 
 Classify every decision before asking or guessing — reversal cost and blast radius
 decide the branch, not how hard the question feels
@@ -23,17 +25,17 @@ decide the branch, not how hard the question feels
   (`${CLAUDE_PLUGIN_ROOT}/reference/human-brief.md`) sent with
   `python3 ${CLAUDE_PLUGIN_ROOT}/tools/ask.py ask` and issue context; mirror Q+A onto the issue.
 
-Work the `must-stop` boundary from `[[must_stop]]` in `${CLAUDE_PLUGIN_ROOT}/tools/fanout.py`,
-never from a prose summary of it.
+Work the `must-stop` boundary from `[[must_stop]]` in `cadence.toml`
+(`python3 ${CLAUDE_PLUGIN_ROOT}/tools/cadence_config.py must-stop <path>`), never from a
+prose summary of it.
 
 Exit 3 alone is not the ask signal: it is every `fork` refusal. Read the printed
 reason. A cap or `must-stop boundary:` is the third branch; `only N surviving
-option(s)` is the first — decide it and `record`, whatever the tool's own remedy
-line says. See `execute-issue.md` § *Decisions*.
+option(s)` is the first — decide it and `record`. See `execute-issue.md` § *Decisions*.
 
-Green pre-commit + tests, then run the code-review skill to LGTM, then `gh pr create --title "<issue-id>: <summary>" --body-file <brief>` with its Shape B brief — never `--fill`, never `--body-file` alone (prompts, fails headless).
+Green lint + tests, then run the code-review skill to LGTM or its circuit breaker, then `gh pr create --title "<[git].pr_title, default {issue}: {summary}>" --body-file <brief>` with its Shape B brief — never `--fill`, never `--body-file` alone (prompts, fails headless).
 
-Notify the ask transport with the PR URL, then **keep going** — `gh pr create` is the middle of the
+Post the PR URL on the issue and notify the ask transport, then **keep going** — CI must pass on the head commit — `gh pr create` is the middle of the
 procedure, not the end. Follow `${CLAUDE_PLUGIN_ROOT}/reference/automated-review.md`
 (when `[review].provider` is a PR bot) and `execute-issue.md` § *When this skill is done*
 rather than restating them.

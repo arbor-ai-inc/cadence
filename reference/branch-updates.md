@@ -67,29 +67,21 @@ the collapse is complete — a clean merge here is not suspicious.
 `gh pr diff <n> --name-only` and confirm it equals the branch's own files. PR B went 36 →
 36 on a correct merge-forward, so "the count dropped" is not the invariant.
 
-**What an agent can actually run today.** Local `git merge` is denied by
-`.claude/settings.json`. The server-side `gh api -X PUT
+**What an agent can actually run** where the permission layer denies local `git
+merge` (as the source project's did) — a guard, not a sandbox; branch protection on
+`main`, where the repo has it, is the control that holds. The server-side `gh api -X PUT
 repos/:owner/:repo/pulls/<n>/update-branch` is not, and it performs the same merge and the
 same merge-base move — see § *If a branch genuinely must be updated*. **But it only
 completes a clean merge**: GitHub will not resolve conflicts server-side, so in the
 conflicting case above there is no *in-place* update path. The recreate recipe below
 still applies — that is what PR A → PR C did — so the fallback is a rebuild, not a dead
-end. Lifting the local denial is tracked separately (T-27).
+end.
 
-`update-branch` is a push, but since 2026-08-26 it **no longer costs a fresh approval**.
-`require_last_push_approval` is off on the main-branch ruleset
-(the project's decision log),
-so a push does not invalidate an existing approval. What still gates the merge is
-`require_code_owner_review` on owned paths and `required_review_thread_resolution`
-everywhere — a push that adds a new unresolved thread, or that touches an owned path
-for the first time, can still block.
-
-Historical, and the reason the rule was removed: while it was on, every merged PR by an
-author with no ruleset bypass whose approval preceded the last commit — PR D, PR E, PR F,
-PR G, PR H — needed a second approval after the push, with no counterexample in the repo.
-Since 2026-08-26 that is no longer the case, so **do not plan for re-approval** after an
-`update-branch`, merge-forward or follow-up commit; plan for an unresolved thread or a
-newly-touched owned path instead.
+`update-branch` is a push. Whether a push costs an existing approval depends on the
+ruleset (`require_last_push_approval`, `dismiss_stale_reviews_on_push`) — check it,
+§ *If a branch genuinely must be updated*. In the source project, while
+`require_last_push_approval` was on, five PRs in a row needed a second approval after
+the push.
 
 Two ways to keep a child from going stale in the first place, in preference order:
 
@@ -222,8 +214,8 @@ When several PRs are open at once, the reflex on a red or blocked PR is to bring
 the branch up to date. Here that reflex is wrong twice over: it is not required,
 and acting on it is how a clean branch acquires a problem it did not have.
 
-**A branch is never required to be up to date with `main`.** The `Protect main`
-ruleset sets `strict_required_status_checks_policy: false`:
+**A branch is not required to be up to date with `main`** unless the ruleset sets
+`strict_required_status_checks_policy: true`. Check:
 
 ```bash
 gh api repos/:owner/:repo/rules/branches/main \
@@ -261,13 +253,9 @@ on `main`: the ruleset targets the default branch only, and a branch carrying a
 merge commit still squashes to a single-parent commit, so `required_linear_history`
 is unaffected.
 
-**Worth knowing before you reach for it:** `update-branch` is a push, but
-`require_last_push_approval` is **off** as of 2026-08-26
-(the project's decision log),
-so a push no longer invalidates an approval and no re-approval is needed afterwards.
-Verify before relying on either statement — and note the command above filters on
-`required_status_checks`, so it cannot see this parameter. Select the
-`pull_request` rule instead:
+**Worth knowing before you reach for it:** `update-branch` is a push, so whether it
+costs an approval depends on two parameters of the `pull_request` rule. The command
+above filters on `required_status_checks` and cannot see them; select this instead:
 
 ```bash
 gh api repos/:owner/:repo/rules/branches/main \
@@ -276,23 +264,10 @@ gh api repos/:owner/:repo/rules/branches/main \
            require_code_owner_review, required_approving_review_count,
            required_review_thread_resolution}'
 ```
-`dismiss_stale_reviews_on_push` is in that list because it is the *other* way a
-push can cost an approval: `require_last_push_approval` being off is not
-sufficient on its own if stale reviews are being dismissed. Both are `false`
-today, which is why PR O kept the reviewer's approval across a later push.
 
-Historical note, since it is cited elsewhere in this file: while the rule was on, an
-approval predating the last push did **not** satisfy it — confirmed on five PRs
-(§ *A stacked branch does not survive its parent merging*).
-
-For anyone in `an infrastructure owners team` this is escapable — bypass on that ruleset covers the
-whole `pull_request` rule inside a PR, though it must be invoked deliberately with
-`gh pr merge --admin`, and each use is recorded as `result=bypass` in the rule-suite audit
-trail. For everyone else, including the agent identity, the `pull_request` rule binds — but
-since 2026-08-26 what it requires is code-owner review on owned paths and thread
-resolution, **not a fresh approval after each push**. See
-the project's decision log
-and the project's decision log.
+Either `require_last_push_approval` or `dismiss_stale_reviews_on_push` being `true`
+means a push costs the approval; plan for a re-review. A ruleset bypass, where someone
+has one, is a deliberate `gh pr merge --admin` and is audited — never the agent's.
 
 Two entry conditions to note, because § *A stacked branch does not survive its parent
 merging* now routes readers here. First, that section's case is a **rendering** problem,

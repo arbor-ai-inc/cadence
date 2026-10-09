@@ -138,6 +138,18 @@ and it is why this reader exists.
 Provider specifics — exact commands, API quirks — are in
 [`reference/providers/`](../reference/providers/).
 
+### Circuit breakers — when a review loop stops
+
+```toml
+[review]
+circuit_breaker = 3        # pre-PR code-review rounds before handing findings to a human
+spec_circuit_breaker = 3   # spec-review rounds in a row without fewer blockers
+max_rounds = 3             # post-PR review rounds
+```
+
+Each must be at least 1; all default to 3. A breaker stops the loop and hands the
+open findings to a human; raising it buys rounds, not convergence.
+
 ### `[paths].principles` — the Gate 2 rubric
 
 Gate 2 grades an engineering design against this file and nothing else, so
@@ -172,6 +184,33 @@ second copy of it, and it will drift.
 Overlays are read through generated wrappers, so they apply to the
 [submodule install](setup.md#or-vendor-it-as-a-git-submodule-with-no-plugin).
 Regenerate the wrappers after setting or changing this key.
+
+### `[paths].templates` — your own spec templates
+
+Unset, the spec workflows draft from cadence's `templates/`. Point it at a
+directory holding your own `_product_template.md`, `_design_template.md` and
+`_testing_plan_template.md` to keep your examples and tables. A file missing
+there falls back to cadence's copy.
+
+### `[git]` — branch, commit and PR-title names
+
+```toml
+[git]
+branch = "{owner}/{issue_lower}-{slug}"
+commit_style = "conventional"          # or "issue-prefix", or "imperative"
+pr_title = "{summary} ({issue})"
+```
+
+Workflows name branches, write commit messages and title PRs from these.
+Placeholders: `{issue}` as written, `{issue_lower}`, `{slug}` (a few words from the
+title), `{owner}` (who or which agent is doing the work), `{summary}`. A misspelled
+one fails the load. With `conventional`, `{summary}` is itself a Conventional Commit
+subject (`feat(api): add the export endpoint`), so set `pr_title` too, or the
+default title reads `XX-1: feat(api): …`.
+
+Unset, each workflow keeps its own default: execute-issue uses the lowercased issue
+id, issue-prefixed commits and `{issue}: {summary}`; git-pr-workflow uses
+`<owner>/<ticket-or-topic>` and plain imperative commits.
 
 ### `[fanout].enabled` — build options instead of asking
 
@@ -212,13 +251,34 @@ recommended = "opus"
 ```
 
 A workflow reads it, compares it to the model it is actually running on, and
-**stops if they differ** — naming both, and how to switch. It enforces nothing
+**stops if they differ** — naming both, and how to switch. The spec workflows
+(`spec-pipeline`, `review-spec`, `draft-plan`) check their own `[models.pins]` entry
+first, then this. `execute-issue` and `code-review` check only their own pin. It enforces nothing
 about which model runs. What it enforces is that you **find out**.
 
 The defect this fixes is not "the wrong model ran". It is "the wrong model ran
 and nothing said so".
 
 Leave it unset if you do not care which model runs a workflow.
+
+### `[models.pins]` — a model per workflow or agent
+
+```toml
+[models.pins]
+product-spec-reviewer = "opus"
+eng-design-reviewer = "opus"
+execute-issue = "opus"
+```
+
+In a project that vendors cadence (see [setup](setup.md)), `tools/wrappers.py`
+writes each pin as `model:` into that skill's or agent's Claude wrapper. In any
+install, a pinned workflow running in Claude Code compares the session model with its
+pin, on start and on every resume, and stops if they differ.
+
+A pin on an **agent** is the durable kind: it holds for the subagent's whole run.
+A pin on a **skill** covers the turn that invoked it, as above. A name that is no
+cadence skill or agent fails the run rather than pinning nothing. Codex wrappers
+never carry one.
 
 ### Setting a model for real
 

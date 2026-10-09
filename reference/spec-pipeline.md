@@ -30,7 +30,7 @@ engineering-only change re-runs only Gate 2.
 
 - A spec has passed spec-driven-development and needs adversarial hardening.
 - The task is substantial enough to need a formal engineering design and
-  Linear-ready task decomposition.
+  tracker-ready task decomposition.
 - You want agent-ready acceptance criteria, not just clarified intent.
 
 Do not use this workflow for quick clarifications or small features where
@@ -54,14 +54,18 @@ principles (Gate 2) to produce a DESIGN_READY, decomposition-bearing spec.
 - Your architecture overview, for the boundaries the design must respect.
 - The project's current-state doc, for what is **built** — never its roadmap,
   which is planned.
-- Spec templates: [`templates/_product_template.md`](../templates/_product_template.md),
-  [`templates/_design_template.md`](../templates/_design_template.md).
+- Spec templates: the project's `[paths].templates` where set, file by file, else
+  cadence's [`templates/`](../templates/). Every `templates/_*` named below means
+  whichever of the two applies.
 - Shared hash helper: `tools/spec_hash.py`. Run it; never compute a hash any
   other way and never write a placeholder.
 
 ## Spec File Structure
 
-Specs live in a per-slug directory `<[paths].specs>/<slug>/`:
+Specs live in a per-slug directory `<[paths].specs>/<slug>/`. **Choose the slug once:**
+first list `<[paths].specs>/*/` on the working tree and on `main`, and if a directory
+already covers the goal, reuse its slug verbatim — re-deriving one from a rephrased
+goal forks a duplicate spec.
 
 - **`<[paths].specs>/<slug>/product.md`** — Product Spec: problem, user, expected
   scale, requirements (user-verifiable), success metrics, non-goals. Author input;
@@ -140,8 +144,9 @@ and the review artifacts.
      editor and not for the author. Deliver via `AskUserQuestion` where the
      harness offers it, otherwise the identical tables as text through
      `python3 tools/ask.py ask "<batched questions>"
-     --context "<slug> spec"`, blocking until the author replies in the
-     Slack thread. Author answers are applied and recorded in the round
+     --context "<slug> spec"`, blocking until the author replies. With no one
+     in session to answer, post the batch on the spec's tracker issue, where there is
+     one, and stop. Author answers are applied and recorded in the round
      files, and the loop continues.
    - On **PRODUCT_READY** — the **product PR gate** (see [PR Gates](#pr-gates)):
      the pipeline **stops editing `product.md`** (advisory findings are not applied
@@ -162,19 +167,18 @@ and the review artifacts.
      to ratify edits made without asking, so each one needs its plain-English
      consequence and something to check it against. Then it **STOPS**. **The
      author's approval of that PR is the acknowledgment**; there is no separate
-     Slack ack round-trip, so the brief is read on the PR rather than in a
+     ack round-trip, so the brief is read on the PR rather than in a
      thread. See [Acknowledgment](#acknowledgment).
-4. After the design PR merges, the author takes the decomposition to Linear as
+4. After the design PR merges, the author takes the decomposition to the tracker as
    tasks.
 
 Author touchpoints, exhaustively: `product.md` authorship, answering decision
 batches, and **approving + merging the product PR (Gate 1 closure) and the design
 PR (Gate 2 closure)** — the latter approval also being the changelog
 acknowledgment. Decision batches
-and circuit-breaker escalations are delivered via
-Slack (`tools/ask.py`); the terminal session blocks until the
-author replies in-thread. Answers are recorded in the round files — Slack is
-transport, not record.
+and circuit-breaker escalations go through the ask transport (`tools/ask.py`,
+`[ask].provider`). Answers are recorded in the round files — the transport is not the
+record.
 
 Pipeline state is entirely file-based. Re-running the entry point resumes from
 the latest round.
@@ -205,7 +209,7 @@ load-bearing rule: **product-gate closure is a merged PR, not just a verdict.**
   full round before merge — and it also invalidates the ack, whose
   changelog described a different artifact (see
   [Editing on a gate PR](#editing-on-a-gate-pr)). The decomposition is filed to
-  Linear after this PR merges.
+  the tracker after this PR merges.
 
 ### Watching the review on a gate PR
 
@@ -355,7 +359,7 @@ Two things this limit is **not**:
 
   This is load-bearing rather than tidiness: [Dispositioning the
   advisories](#dispositioning-the-advisories) requires **every** advisory open at gate
-  close to be dispositioned into `carried-advisories.md`, and a Linear follow-up has to
+  close to be dispositioned into `carried-advisories.md`, and a tracker follow-up has to
   restate the concern to stand alone. An advisory the reviewer counted but never wrote
   down cannot be dispositioned, filed, or carried — it is just a number, which is the
   evaporation this section exists to prevent.
@@ -548,6 +552,9 @@ It also checks every obligation lives in `product.md`, the design artifact or
 `carried-advisories.md`, AC coverage runs both ways, every task carries an AC, and
 the stated task order is a valid linearization of the dependency column.
 
+A reviewer's **reading set** decides what it can falsify: a finding outside it survives
+every round, and a review with a different reading set can find it in one pass.
+
 ### Batch blocker fixes
 
 Fix every blocker in a round in **one** editor pass, then re-review once.
@@ -586,7 +593,7 @@ reading, since next-gate design work is also "work someone does later":
    leaving no owner behind it: wording, a clarification, an altitude nit. It dies on
    the PR once answered. **Do not file an issue for one of these**; a ticket per minor
    is how a tracker stops being read.
-3. **A Linear follow-up issue** — it survives this gate and the next, or it needs
+3. **A tracker follow-up issue** — it survives this gate and the next, or it needs
    implementation or process work after the spec closes: a capability gap, a
    durability or correctness concern, a boundary that wants revisiting. File it
    against the team with the label `<slug>-followup` (e.g.
@@ -684,8 +691,8 @@ Gate 2 re-runs without re-reviewing the product spec.
 
 ## Circuit Breaker
 
-If unresolved blocker count fails to strictly decrease across three
-consecutive review rounds, the pipeline pauses and escalates all open
+If unresolved blocker count fails to strictly decrease across
+`[review].spec_circuit_breaker` consecutive review rounds (default 3), the pipeline pauses and escalates all open
 questions to the author via `ask.py ask` regardless of decision tags.
 
 **The breaker applies only while blockers are above zero.** A gate at zero
@@ -728,49 +735,18 @@ rounds accumulate without either mechanism stopping them.
 
 ## Which model runs this
 
-**Cadence pins no model, and cannot.** That is a limitation of the harness, not
-a preference, and it is worth understanding because the failure it produces is
-invisible.
+**Cadence's published files pin no model.** A skill's `model:` pin covers only the
+turn that invoked it; a **subagent's** holds for its whole run; nothing else persists
+(details: [configuration](../docs/configuration.md#models)). This workflow stops to ask
+the author every round, so a pin on the pipeline skill covers the first turn and
+nothing after, while the reviewer subagents genuinely hold theirs.
 
-Three facts, each verified against the harness docs:
-
-1. A skill's `model:` pin **applies only to the turn that invoked the skill.**
-   Your session model resumes on your next prompt.
-2. A **subagent's** pin does hold for that subagent's whole run.
-3. **Nothing else persists.** No hook can change a model. There is no per-role
-   override — the `modelOverrides` setting maps provider model IDs, it does not
-   assign models to agents.
-
-Now put that against this workflow: it **stops to ask the author** every round.
-So a pin on the pipeline skill covers the first turn and nothing after. The
-review rounds are subagents and genuinely hold their model; the orchestration
-between them silently falls back. A pipeline pinned this way reads as running on
-one model throughout and does not.
-
-That is the whole reason the pin was removed rather than translated.
-
-### What replaces it
-
-`[models].recommended` in `cadence.toml`, and a check at the top of the
-pipeline. The check reads the recommendation, compares it to the model actually
-running, and **stops if they differ** — naming both and how to switch.
-
-It enforces nothing about the model. What it enforces is that you find out. The
-defect being fixed is not "the wrong model ran", it is "the wrong model ran and
-nothing said so".
-
-### Making it actually stick
-
-Two ways, both the harness's own:
-
-- **`/model <name>`** before you start the pipeline. Lasts the session.
-- **`"model"` in `.claude/settings.json`** — durable, and shared with your team
-  if committed. `.claude/settings.local.json` for yourself only.
-
-One thing to rule out if a model choice appears to be ignored: an
-`availableModels` allowlist. A value excluded by it **is not used and the
-session keeps its current model**, silently. That looks identical to a pin that
-did not hold.
+- **`[models].recommended`**: a check at the top of the pipeline compares it with the
+  running model and **stops if they differ**, naming both. It enforces that you find
+  out, not which model runs.
+- **`[models.pins]`** (vendored projects only): written into the generated wrappers,
+  so the reviewer subagents run on a model of the project's choosing.
+- **`/model`**, or `"model"` in `.claude/settings.json`, sets the session's model.
 
 ## Acknowledgment
 
@@ -795,7 +771,7 @@ what it approved.
 
 ## Non-Goals (v1)
 
-- Does not create Linear issues **for the task decomposition** — that stays
+- Does not create tracker issues **for the task decomposition** — that stays
   copy-paste material after the design PR merges; full Linear MCP integration for it
   is v2. It *does* file advisory follow-up issues at gate close, which are a different
   thing: a bounded number of independently-schedulable items, not the epic's task

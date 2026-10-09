@@ -112,7 +112,8 @@ lowering a priority needs a *Decisions* entry.
 8. **Answer the cross-cutting questions once:** the capability row (§ *Workflow*
    step 1), E2E and smoke (step 9) and the inventory (step 10).
 9. **Write the file** from
-   [`templates/_testing_plan_template.md`](../templates/_testing_plan_template.md),
+   [`templates/_testing_plan_template.md`](../templates/_testing_plan_template.md)
+   (or the project's copy in `[paths].templates`),
    which sets its sections and order. Update an existing file in place. Under
    `draft-plan`, its Shape B brief is the reply. Otherwise reply with the summary
    line, the path, and either the proposed P0 rows ("Agree the P0 rows with your

@@ -103,7 +103,8 @@ decomposition, escalate from spec-driven-development to the spec pipeline:
 
 1. Use spec-driven-development to clarify product intent and shape
    `<[paths].specs>/<slug>/product.md`, from
-   [`templates/_product_template.md`](../templates/_product_template.md).
+   [`templates/_product_template.md`](../templates/_product_template.md), or the
+   project's copy in `[paths].templates`.
 2. `product.md` is product input — it may be drafted by the author or shaped
    by an agent, but must be author-confirmed before the pipeline reviews it.
 3. Hand `product.md` to the spec pipeline, which adversarially reviews it

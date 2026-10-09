@@ -83,18 +83,24 @@ def split_frontmatter(text: str) -> tuple[str, str]:
 
 
 def render(text: str, src: str, root_prefix: str, keep_claude_keys: bool,
-           overlay: str | None = None) -> str:
+           overlay: str | None = None, model: str | None = None) -> str:
     """One wrapper: frontmatter, a generated-file header, the body re-rooted.
 
     ${CLAUDE_PLUGIN_ROOT} only expands inside a plugin, so the body is rewritten
     to point at `root_prefix` instead, and /cadence:<skill> becomes /<skill>.
     allowed-tools is Claude Code's key and
     means nothing to Codex; everything else carries over unchanged.
+
+    `model` is the project's pin from [models.pins], Claude-only like
+    allowed-tools. Cadence ships no pins; a project that vendors it may want
+    its reviewers on one model and its implementer on another.
     """
     fm, body = split_frontmatter(text)
     lines = fm.splitlines()
     if not keep_claude_keys:
         lines = [ln for ln in lines if not ln.startswith("allowed-tools:")]
+    elif model:
+        lines = [ln for ln in lines if not ln.startswith("model:")] + [f"model: {model}"]
     body = body.replace("${CLAUDE_PLUGIN_ROOT}/", root_prefix)
     # The whole point of a wrapper is the unprefixed name, so a cross-reference
     # to /cadence:<skill> becomes /<skill>, in the description too.
@@ -107,9 +113,11 @@ def render(text: str, src: str, root_prefix: str, keep_claude_keys: bool,
     return out
 
 
-def planned(project: Path, targets: list[str], overlays: str | None) -> dict[Path, str]:
+def planned(project: Path, targets: list[str], overlays: str | None,
+            pins: dict | None = None) -> dict[Path, str]:
     """Every wrapper path in the project, and the content it should have."""
     prefix = VENDOR_DIR + "/"
+    pins = pins or {}
     want: dict[Path, str] = {}
     for src in sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md")):
         name = src.parent.name
@@ -120,13 +128,13 @@ def planned(project: Path, targets: list[str], overlays: str | None) -> dict[Pat
         for t in targets:
             base, keep = TARGETS[t]
             want[project / base / name / "SKILL.md"] = render(
-                text, f"{VENDOR_DIR}/skills/{name}/SKILL.md", prefix, keep, overlay)
+                text, f"{VENDOR_DIR}/skills/{name}/SKILL.md", prefix, keep, overlay, pins.get(name))
     if "claude" in targets:
         for src in sorted((PLUGIN_ROOT / "agents").glob("*.md")):
             overlay = f"{overlays.rstrip('/')}/{src.stem}.md" if overlays else None
             want[project / AGENTS_DIR / src.name] = render(
                 src.read_text(encoding="utf-8"), f"{VENDOR_DIR}/agents/{src.name}",
-                prefix, True, overlay)
+                prefix, True, overlay, pins.get(src.stem))
     return want
 
 
@@ -186,7 +194,17 @@ def main(argv: list[str] | None = None) -> int:
               f"  at a {VENDOR_DIR}/ that does not hold it.", file=sys.stderr)
         return 1
 
-    want = planned(project, targets, cfg.overlays_dir)
+    # A pin naming no skill or agent is a typo that would silently pin nothing.
+    names = {p.parent.name for p in (PLUGIN_ROOT / "skills").glob("*/SKILL.md")} - SKIP_SKILLS
+    names |= {p.stem for p in (PLUGIN_ROOT / "agents").glob("*.md")}
+    unknown = sorted(set(cfg.model_pins) - names)
+    if unknown:
+        print(f"wrappers: [models.pins] names {', '.join(unknown)}, which is no wrapped "
+              f"cadence skill or agent ({', '.join(sorted(SKIP_SKILLS))} is not wrapped). "
+              f"Known: {', '.join(sorted(names))}", file=sys.stderr)
+        return 1
+
+    want = planned(project, targets, cfg.overlays_dir, cfg.model_pins)
     stale, conflicts, written = [], [], []
     for path, content in want.items():
         rel = path.relative_to(project).as_posix()

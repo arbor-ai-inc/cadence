@@ -22,18 +22,18 @@ context, preferably a different model or agent. `[review].provider` in
 | `coderabbit` | a PR-time bot; not a pre-PR pass | anything |
 | `none` | nothing | — |
 
-**Pick a different agent from the one implementing:** Claude Code → `codex`; Codex →
-`claude`. `subagent` is the fallback when only one agent is available — same model, so
-the weakest at finding what that model missed.
+**Prefer a different agent from the implementer** where one exists (Claude Code →
+`codex`; Codex → `claude`); `subagent` is same-model, so weakest at what that model
+missed. Run it on the strongest review model at high effort; another agent's CLI may add
+a read-only second opinion.
 
 ### Driving with Codex
 
 `subagent` is unavailable (Codex has no Task tool); use `claude`.
 
-The **spec pipeline** has no such escape hatch: its reviewer subagents are limited to
-`Read, Grep, Glob, Write` — no `Edit` — so they cannot edit the spec they review.
-Without subagents that guarantee is gone; run it from Claude Code, or say the
-separation is by convention only.
+The **spec pipeline** has no such escape hatch: its reviewer subagents lack `Edit`, so
+they cannot edit the spec they review. Without subagents that guarantee is gone; run
+it from Claude Code, or say the separation is by convention only.
 
 ### Passing the reviewer its inputs
 
@@ -59,7 +59,7 @@ to fix before merge, costly after. Load the cell that fits, not the whole tree:
 | a component's internals | that component's own README reading-set |
 | behaviour claimed as already built, or as deferred | the project's current-state doc — never its roadmap, which is planned, not built |
 
-- **Trace to the consumer.** When a diff writes data another plane reads, follow it
+- **Trace to the consumer.** When a diff writes data another component reads, follow it
   to its reader before accepting "the consumer side is a follow-up". An
   *unimplemented* deferral is fine; an existing consumer that silently does the wrong
   thing is a BLOCKER.
@@ -96,11 +96,11 @@ owns:
   consumer, and whether that entry joins the gated set.
 
 **2. Can the customer measure what this does?** (principle #15) For a new way to
-spend, serve, fail, or convert, follow it to the reporting path and ask what an
-advertiser or publisher would see:
+charge, deliver, fail, or convert, follow it to the reporting path and ask what the
+customer would see:
 
 - **A wrong number is a BLOCKER** — a new outcome merged into an existing count, e.g. a
-  degraded-fallback serve not *distinguishable* from an impression (T-01).
+  degraded fallback not *distinguishable* from a normal success (T-01).
 - **A missing number is a SHOULD** — no event type, rollup dimension, or read-API
   field. Name the absent metric.
 - **An ambiguous signal is worse than a missing one, operator signals included.** One
@@ -112,7 +112,7 @@ reporting rollup's dimensions → the read API. A dimension added at one
 layer and missing at the next is the common defect.
 
 **3. Can the customer reach it?** (principle #14) A capability only behind an API, with
-no console surface, is invisible to its user; ship endpoint and UI affordance together
+no UI surface, is invisible to its user; ship endpoint and UI affordance together
 (T-03).
 
 **Raising them.** Name the gap and what would close it; the author pulls it in or
@@ -172,8 +172,9 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
 - BLOCKER also covers: a payload shape that diverges from its declared contract;
   a discriminator, enum, or invariant placed outside the typed boundary its
   consumer dispatches on; an unversioned change to a persisted shape with no
-  migration path; **a cross-plane endpoint whose plane graph, edge list, plane
-  boundary tables, or component route table were not updated in the same diff**.
+  migration path; **a new cross-boundary endpoint whose entries in the artifacts
+  your rubric lists for it** (§ *Architectural context to load*) **were not updated
+  in the same diff**.
   Cite the principle whose **Check** question fails.
 - **A claim about code outside the diff is a finding to test, not a fact** — see §
   *A claim the diff asserts is not evidence*.
@@ -188,7 +189,7 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
   Author-side: `test-driven-development.md` § *A comment that states a property is a
   test you have not written yet*.
 - Cite a principle only when its **Check** question genuinely fails; grading a diff
-  against all 26 makes the review ignorable.
+  against all of them makes the review ignorable.
 - **A test for a P0 row in the spec's `testing-plan.md` must be able to fail.** No
   break-it result (the break; the failing line, on that row's assertion) and no
   *not audited* is a SHOULD; still passing after the break is a BLOCKER.
@@ -202,12 +203,12 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
 3. Resolve every BLOCKER and SHOULD in the implementing context. NITs are judgment.
    A product decision goes as a Shape A decision brief (`human-brief.md`):
    `AskUserQuestion` where offered, else the identical table as text via
-   `tools/ask.py ask "<question>" --context "<issue-id> review"` (Codex's defined
-   path, not a degraded one). Mirror question + answer into the Linear issue.
+   `tools/ask.py ask "<question>" --context "<issue-id> review"`. Mirror question +
+   answer onto the issue.
 
    **A lint finding is a claim about *this repo's* config — check it before obeying.**
-   Nothing here sets `select`, `extend-select`, or a rule flag on the hook's command
-   line, so only ruff's default rules run (T-18). Check `[tool.ruff]` in every
+   Where nothing sets `select`, `extend-select`, or a rule flag on the hook's command
+   line, only ruff's default rules run (T-18). Check `[tool.ruff]` in every
    `pyproject.toml`/`ruff.toml`, then run the hook itself
    (`pre-commit run ruff --all-files`) — the only answer covering every source. A claim
    about any *other* tool's behaviour: run it.
@@ -241,9 +242,9 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
    `test-driven-development.md` § *Mutation-test any change that adds a rule*; output
    that is not an explicit pass-or-fail is a broken harness, never a survival.
 5. Re-run pre-commit and tests, commit the resolutions, re-run the reviewer.
-6. Circuit breaker: max 3 rounds. If not LGTM after round 3, post the open findings
-   to Slack via `ask` as a Shape B change brief and stop. **Stop means stop:** no
-   fourth round and no "one last fix" on the way out — a round-N finding is often a
+6. Circuit breaker: `[review].circuit_breaker` rounds (default 3). Not LGTM by the
+   last: post open findings as a Shape B brief on the issue (if tracked) and via
+   `tools/ask.py notify`; stop. **Stop means stop:** no extra round and no "one last fix" on the way out — a round-N finding is often a
    defect the round-(N−1) fix introduced (C-15). A commit after the last review is
    **named in the brief and PR body** with what it changed; never call that head LGTM.
 7. On LGTM, write and print the Shape B change brief (`human-brief.md`) — the only

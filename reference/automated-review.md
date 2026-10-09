@@ -85,7 +85,7 @@ do not re-derive it:
 
 - [`code-review-and-quality`](./code-review-and-quality.md) § *Working With Automated
   Reviewers* — the verified commands that enumerate a review's findings.
-- [`docs/engineering/code-review.md`](./code-review.md) § *Automated AI review
+- [`code-review`](./code-review.md) § *Automated AI review
   * — eligibility, exclusions, and the override path.
 - **your reviewer's own config** — the source of truth for what actually runs.
   Cadence's notes for one reviewer are in
@@ -110,7 +110,7 @@ the way a human's do. A reply that declines a finding leaves both in place.
    usually does it. Where a finding was declined rather than fixed, clear it explicitly
    — resolve the thread, the provider's **approve** command as a top-level comment (**the PR author
    may do this themselves**), or the dismissal / ruleset-bypass paths in
-   [`docs/engineering/code-review.md`](./code-review.md) § *Automated AI review
+   [`code-review`](./code-review.md) § *Automated AI review
    *, in that order of preference.
 
 Anything else is "keep waiting", "resume the review", or "clear the block".
@@ -261,11 +261,11 @@ out, and that the work is incomplete.**
 
 ### Loop until settled, bounded — a separate counter
 
-Bound the fix rounds at **three**, then post the open findings to the ask transport via
-`tools/ask.py notify` and hand to a human.
+Bound the fix rounds at **`[review].max_rounds`** (default 3), then post the open findings on the issue (where
+there is a tracker) and via `tools/ask.py notify`, and hand to a human.
 
 **A round that changes code is verified before it is pushed** —
-`the project's `[commands].lint`` and the repo's
+`[commands].lint` and the repo's
 test suite, green, exactly as
 [`code-review`](./code-review.md) requires of every pre-PR resolution round. Nothing
 about a finding arriving from a bot makes its fix need less proof, and without this the

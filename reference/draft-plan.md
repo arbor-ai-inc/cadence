@@ -11,7 +11,7 @@ Its **Principles adherence** section covers only the principles the design
 engages: how each is satisfied, or why a trade-off is justified.
 
 **Size and shape it per
-[the template](../templates/_design_template.md)'s § *How to use this template***:
+[the template](../templates/_design_template.md) (or yours)'s § *How to use this template***:
 drop that block, classify the change in the executive summary,
 include an optional section only where it applies. Where the template says to
 split, `design.md` is the HLD and each area gets `design/<area>.md` — one Gate 2
@@ -23,7 +23,7 @@ complain about — needs no `product.md` and no Gate 1. A missing `product.md` i
 not by itself the test. The input is the request that prompted it; the
 design's *Goals, Non-goals & Requirements* carries the Rn and one line on why no
 product gate is needed. User-visible with no `product.md`: refuse; name it. Gate 2
-grades the claim; a user-visible goal is a BLOCKER fixed by a `product.md`.
+grades it; a user-visible goal is a BLOCKER, fixed by `product.md`.
 
 ## When To Use
 

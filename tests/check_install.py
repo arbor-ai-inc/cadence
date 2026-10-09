@@ -265,7 +265,9 @@ def vendored_first_hour(tmp: Path, plugin: Path, check) -> None:
     git("init", "--quiet", "-b", "main", cwd=proj)
     git("config", "user.email", "t@example.com", cwd=proj)
     git("config", "user.name", "T", cwd=proj)
-    git("-c", "protocol.file.allow=always", "submodule", "add", "--quiet", str(src), ".cadence", cwd=proj)
+    # A file:// URL, not a path: a path clone hardlinks objects, which fails
+    # intermittently ("hardlink different from source") on some runners.
+    git("-c", "protocol.file.allow=always", "submodule", "add", "--quiet", src.as_uri(), ".cadence", cwd=proj)
     git("commit", "--quiet", "-m", "vendor cadence", cwd=proj)
 
     # An empty HOME, so the plugin cache cannot be what makes this pass.
@@ -350,6 +352,22 @@ def vendored_first_hour(tmp: Path, plugin: Path, check) -> None:
 
     p = run(["python3", str(plugin / "tools" / "wrappers.py")], proj, env)
     check("vendored: wrappers refuse to run from a copy that is not .cadence/", p.returncode == 1)
+
+    # [models.pins]: a pin lands in the Claude wrapper's frontmatter, never in Codex's.
+    base = (proj / "cadence.toml").read_text()
+    (proj / "cadence.toml").write_text(base + '\n[models.pins]\ncode-review = "opus"\nspec-editor = "fable"\n')
+    p = run(wrap, proj, env)
+    check("vendored: wrappers generate with pins", p.returncode == 0, p.stderr.strip()[:200])
+    fm = lambda f: f.read_text().split("\n---\n", 1)[0]
+    check("vendored: a skill pin lands in the Claude wrapper", "model: opus" in fm(claude))
+    check("vendored: an agent pin lands in the agent wrapper",
+          "model: fable" in fm(proj / ".claude" / "agents" / "spec-editor.md"))
+    check("vendored: an unpinned wrapper gets no model", "model:" not in fm(proj / ".claude" / "agents" / "code-reviewer.md"))
+    check("vendored: Codex wrappers never carry a pin", "model:" not in fm(codex))
+    (proj / "cadence.toml").write_text(base + '\n[models.pins]\ncode-reveiw = "opus"\n')
+    p = run(wrap, proj, env)
+    check("vendored: a pin naming no skill or agent fails", p.returncode == 1 and "code-reveiw" in p.stderr)
+    (proj / "cadence.toml").write_text(base)
 
 
 if __name__ == "__main__":

@@ -24,12 +24,27 @@ test = "pytest"
 #   github  — via `gh issue`
 #   none    — no tracker; the issue body is passed to the workflow inline
 provider = "none"
-# Recognises an issue id in a prompt, and names the branch. The first capture
-# group, lowercased, becomes the branch name.
+# Recognises an issue id in a prompt. Its first capture group is {issue} in
+# the [git] patterns below.
 issue_key = "^([A-Z]{2,5}-[0-9]+)$"
 # Workflow states to move an issue through. Omit any your tracker lacks.
 # state_started = "In Progress"
 # state_in_review = "In Review"
+
+
+[git]
+# How branches, commits and PR titles are named. Unset, each workflow keeps its
+# own default: execute-issue uses the lowercased issue id, issue-prefixed
+# commits and an "{issue}: {summary}" title; git-pr-workflow uses
+# <owner>/<ticket-or-topic> and plain imperative commits.
+# Placeholders: {issue} (as written), {issue_lower}, {slug} (a few words from the
+# title), {owner} (who or which agent is doing the work), {summary}.
+# branch = "{owner}/{issue_lower}-{slug}"
+#   issue-prefix — "XX-33: add the export endpoint"
+#   conventional — Conventional Commits, "feat(api): add the export endpoint"
+#   imperative   — "Add the export endpoint"
+# commit_style = "conventional"
+# pr_title = "{summary} ({issue})"
 
 
 [ask]
@@ -66,6 +81,12 @@ provider = "none"
 # bot_login = "coderabbitai[bot]"
 # Post-PR review rounds before a workflow stops and reports what is unresolved.
 max_rounds = 3
+# Circuit breakers. Pre-PR code-review rounds before the loop stops and hands the
+# open findings to a human:
+circuit_breaker = 3
+# Spec-review rounds in a row without fewer blockers before the spec pipeline
+# escalates to the author:
+spec_circuit_breaker = 3
 
 
 [paths]
@@ -84,6 +105,9 @@ review_standards = "docs/code-review-standards.md"
 # by tools/wrappers.py tell the agent to read the matching one after the
 # canonical doc. An overlay adds rules; it never removes cadence's.
 # overlays = "docs/agent-overlays"
+# Optional: your own spec templates (_product_template.md, _design_template.md,
+# _testing_plan_template.md). Unset means cadence's templates/.
+# templates = "specs"
 
 
 [models]
@@ -105,6 +129,15 @@ review_standards = "docs/code-review-standards.md"
 #
 # Leave it unset if you do not care which model runs a workflow.
 # recommended = "opus"
+
+# [models.pins]
+# A model per skill or agent. In a project that vendors cadence,
+# tools/wrappers.py writes each pin as `model:` into that Claude wrapper: a
+# subagent's pin holds for its whole run; a skill's covers the turn that invoked
+# it. In any install, a pinned workflow in Claude Code checks the session model
+# against its pin and stops if they differ. Codex ignores pins.
+# eng-design-reviewer = "opus"
+# execute-issue = "opus"
 
 
 [retro]
