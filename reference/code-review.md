@@ -189,6 +189,9 @@ most-recurring trap in the ledger (`unverified-artifact-claim`, C-11), per surfa
   test you have not written yet*.
 - Cite a principle only when its **Check** question genuinely fails; grading a diff
   against all 26 makes the review ignorable.
+- **A test for a P0 row in the spec's `testing-plan.md` must be able to fail.** No
+  break-it result (the break; the failing line, on that row's assertion) and no
+  *not audited* is a SHOULD; still passing after the break is a BLOCKER.
 - First line of output must be `LGTM` or `FINDINGS`. Reviewers never rewrite code.
 
 ## Loop

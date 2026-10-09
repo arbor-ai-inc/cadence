@@ -76,6 +76,14 @@ repos:
         pass_filenames: false
         files: ^(reference/.*|skills/.*|agents/.*|adapters/.*|templates/.*|tests/check_agent_skills\.py)$
 
+      - id: spec-pipeline
+        name: spec-pipeline
+        description: design_hash coverage, the design-only test wording, and the design template's section lists.
+        entry: python3 tests/check_spec_pipeline.py
+        language: system
+        pass_filenames: false
+        files: ^(tools/spec_hash\.py|templates/_design_template\.md|agents/.*|skills/.*|adapters/.*|reference/.*|tests/check_spec_pipeline\.py)$
+
       - id: doc-budget
         name: doc-budget
         description: Every reference doc stays within its byte budget in tests/doc_budget.json.

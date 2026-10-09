@@ -3,40 +3,42 @@
 ## Overview
 
 The drafting step of the spec pipeline. Writes
-`<[paths].specs>/<slug>/design.md` — the engineering design for a spec whose
-product spec has reached **PRODUCT_READY** (Gate 1) **and whose product PR has
-merged to `main`** — using `product.md` as input and the rubric at
-`[paths].principles` as guardrails. Gated by the merged product PR and a
-`product_hash` check.
+`<[paths].specs>/<slug>/design.md` against the rubric at `[paths].principles`.
+**With a `product.md`**, the spec must be PRODUCT_READY (Gate 1), its product PR
+merged to `main`, and `product_hash` matching. **With none**, see *No product gate*.
 
-The drafted `design.md` must include a **Principles adherence** section (per
-[`templates/_design_template.md`](../templates/_design_template.md)) stating,
-for each engaged principle, how the design satisfies it or why a trade-off is
-justified. Gate 2 reviews against that section.
+Its **Principles adherence** section covers only the principles the design
+engages: how each is satisfied, or why a trade-off is justified.
 
-**A principle the design does not engage is not a row.** The section is
-evidence about the trade-offs this design actually makes; padding it with every
-principle in the rubric turns a reviewable claim into a checklist nobody
-reads.
+**Size and shape it per
+[the template](../templates/_design_template.md)'s § *How to use this template***:
+drop that block, classify the change in the executive summary,
+include an optional section only where it applies. Where the template says to
+split, `design.md` is the HLD and each area gets `design/<area>.md` — one Gate 2
+artifact under one `design_hash`, reviewed, edited and committed together.
+
+**No product gate.** A refactor, migration or infra change with no
+user-verifiable requirement — nothing a customer could see, be billed for, or
+complain about — needs no `product.md` and no Gate 1. A missing `product.md` is
+not by itself the test. The input is then the request that prompted the work; the
+design's *Goals, Non-goals & Requirements* carries the Rn and one line on why no
+product gate is needed, and Gate 2 grades that claim — a user-visible goal is a
+BLOCKER whose remedy is a `product.md`.
 
 ## When To Use
 
-For the full pipeline loop (Gate 1 → draft → Gate 2 to DESIGN_READY), use
-[spec-pipeline](./spec-pipeline.md) instead. Use this step directly only when
-you need to draft `design.md` in isolation after a confirmed PRODUCT_READY
-verdict.
+Drafting `design.md` in isolation; for the full loop use
+[spec-pipeline](./spec-pipeline.md).
 
 ## Workflow
 
-See the full procedure in
-[`spec-pipeline.md`](./spec-pipeline.md#hash-gates) — this step corresponds to
-the drafting phase of that workflow. Refuse to draft unless **the product PR
-has merged (`product.md` is on `main` — the [product PR gate](./spec-pipeline.md#pr-gates))**,
-the most recent Gate 1 round is PRODUCT_READY, and its recorded `product_hash`
-matches the current `product.md` (a product edit since the verdict re-opens
-Gate 1).
+With a `product.md`, refuse unless all three conditions above hold
+([PR gate](./spec-pipeline.md#pr-gates), [hash gate](./spec-pipeline.md#hash-gates)),
+and say which failed.
 
-Hand the result back as a Shape B change brief
-([`human-brief`](./human-brief.md)), naming which principles the design engages —
-the principle numbers belong in the brief's evidence column, not in its
-plain-English one.
+Then draft `testing-plan.md` from the sized design, per
+[`test-authoring`](./test-authoring.md) § *From a spec*, unless the design's
+*Test strategy* opts out.
+
+Hand back a Shape B brief ([`human-brief`](./human-brief.md)) naming the
+principles engaged — numbers in the evidence column only.

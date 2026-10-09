@@ -23,6 +23,7 @@ flowchart TD
 
   A --> C["Implement behaviour, or fix a bug, with tests"]
   C --> TDD["test-driven-development"]
+  C -->|"above unit level, or a spec's plan"| TA["test-authoring"]
 
   A --> I["Pick up a tracked issue and build it"]
   I --> EI["execute-issue"]
@@ -55,8 +56,9 @@ flowchart TD
 | [spec-driven-development](./spec-driven-development.md) | A task needs concrete expected behaviour, acceptance criteria and assumptions before code changes. |
 | [spec-pipeline](./spec-pipeline.md) | Taking a spec through two adversarial gates — product, then engineering design — to an agent-ready decomposition. |
 | [review-spec](./review-spec.md) | Running one review round in isolation. Sub-step of spec-pipeline. |
-| [draft-plan](./draft-plan.md) | Drafting `design.md` for a spec that reached PRODUCT_READY. Sub-step of spec-pipeline. |
+| [draft-plan](./draft-plan.md) | Drafting `design.md` (and its testing plan) for a spec past Gate 1, or a design-only one. Sub-step of spec-pipeline. |
 | [test-driven-development](./test-driven-development.md) | Behaviour is changing and tests should prove the change or guard the regression. |
+| [test-authoring](./test-authoring.md) | Planning a spec's tests, or adding a test above unit level, a shared fixture, or E2E/smoke coverage. |
 | [execute-issue](./execute-issue.md) | Picking up a tracked issue and implementing it autonomously: branch, build, review, PR. Never merges. |
 | [decision-fanout](./decision-fanout.md) | An autonomous run reached a decision with more than one defensible answer. Builds each option in its own worktree instead of stalling. |
 | [code-review](./code-review.md) | Driving adversarial review of a branch to LGTM, before the PR exists. |

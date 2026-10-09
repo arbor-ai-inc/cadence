@@ -43,6 +43,8 @@ framework doubles the ways a suite can silently not run.
    - Service or API tests for request/response behavior.
    - Integration tests for cross-component contracts.
    - UI or browser checks for user-visible workflows.
+   Above unit level, or for a P0 row of `testing-plan.md`, follow
+   [`test-authoring`](./test-authoring.md).
 3. For a bug, write or identify a reproduction that fails before the fix.
 4. For new behavior, write a failing test first when practical.
 5. Implement the smallest change that makes the test pass.

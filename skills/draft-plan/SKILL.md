@@ -1,9 +1,11 @@
 ---
 name: draft-plan
 description: >
-  Drafts design.md for a spec that has reached PRODUCT_READY (Gate 1), against
-  the project's architectural principles. Gated by the merged product PR, the
-  PRODUCT_READY verdict, and a product_hash match. Use when asked to draft the
+  Drafts design.md for a spec, against the project's architectural principles.
+  With a product.md, gated by its merged PR, the PRODUCT_READY verdict and a
+  product_hash match; with none and no user-verifiable requirement (nothing a
+  customer could see, be billed for, or complain about), the design carries its
+  own requirements and drafts straight away. Use when asked to draft the
   engineering design for a spec.
 argument-hint: <specs>/<slug>/
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash
@@ -15,9 +17,13 @@ This is a real gate, not a formality. Cadence cannot switch models: a skill's `m
 
 Follow the canonical procedure in `${CLAUDE_PLUGIN_ROOT}/reference/draft-plan.md` exactly.
 
-**Refuse to draft unless all three hold**, and say which one failed: the product PR has merged so `product.md` is on `main`; the most recent Gate 1 round is PRODUCT_READY; and that round's recorded `product_hash` matches the current `product.md` under `python3 ${CLAUDE_PLUGIN_ROOT}/tools/spec_hash.py`. A product edit since the verdict re-opens Gate 1.
+**No `product.md` and no user-verifiable requirement — nothing a customer could see, be billed for, or complain about — means no product gate:** draft from the request that prompted the work, with the design's own § *Goals, Non-goals & Requirements* as the Rn source plus one line on why it needs no product gate. If anything about the change is user-visible, billable or complainable and there is no `product.md`, refuse and name it.
 
-Write from `${CLAUDE_PLUGIN_ROOT}/templates/_design_template.md`, using `product.md` as input and the rubric at `[paths].principles` as guardrails.
+**With a `product.md`, refuse to draft unless all three hold**, and say which one failed: the product PR has merged so `product.md` is on `main`; the most recent Gate 1 round is PRODUCT_READY; and that round's recorded `product_hash` matches the current `product.md` under `python3 ${CLAUDE_PLUGIN_ROOT}/tools/spec_hash.py`. A product edit since the verdict re-opens Gate 1.
+
+Write from `${CLAUDE_PLUGIN_ROOT}/templates/_design_template.md`, using `product.md` as input and the rubric at `[paths].principles` as guardrails. Size and shape it per the template's § *How to use this template*, which owns the figures: delete that block, classify the change in the executive summary, include an optional section only where it applies. Where it says to split, `design.md` is the HLD and each area gets `<specs>/<slug>/design/<area>.md`, indexed in *Sub-designs*; one `design_hash` covers all of them.
+
+Then draft `<specs>/<slug>/testing-plan.md` from `${CLAUDE_PLUGIN_ROOT}/templates/_testing_plan_template.md`, per `${CLAUDE_PLUGIN_ROOT}/reference/test-authoring.md` § *From a spec* (plan only), unless the design's *Test strategy* opts out.
 
 The **Principles adherence** section states, per engaged principle, how the design satisfies it or why a trade-off is justified. Only principles the design actually engages — a padded table is a checklist nobody reads.
 

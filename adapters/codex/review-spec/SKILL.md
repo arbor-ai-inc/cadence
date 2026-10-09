@@ -21,7 +21,7 @@ Read `[paths].specs` and `[paths].principles` from the user's config: `python3 .
 
 **Decide the scope before invoking anyone.** Apply the ordered state table in `reference/spec-pipeline.md` § *The rule* to the latest round **for the gate under review** — round numbers are global across gates, so the highest-numbered round in the directory may belong to the other gate. A gate with zero blockers and a hash matching the artifact is closed: say so and stop, without invoking a reviewer.
 
-Compute hashes with `python3 .cadence/tools/spec_hash.py` and pass them in. Never compute a hash by hand and never write a placeholder — that is the failure this tool exists to prevent.
+Compute hashes with `python3 .cadence/tools/spec_hash.py` and pass them in: `spec` mode on `product.md` (`product_hash: null` on a design-only spec, which has none), `design` mode on `design.md` (Gate 2 only), which covers every file under `design/`. Never compute a hash by hand and never write a placeholder — that is the failure this tool exists to prevent.
 
 Gate 1 → the `product-spec-reviewer` subagent. Gate 2 → `eng-design-reviewer`. The reviewer writes the round file; it never edits the spec.
 
