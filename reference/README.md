@@ -61,7 +61,9 @@ flowchart TD
 | [decision-fanout](./decision-fanout.md) | An autonomous run reached a decision with more than one defensible answer. Builds each option in its own worktree instead of stalling. |
 | [code-review](./code-review.md) | Driving adversarial review of a branch to LGTM, before the PR exists. |
 | [code-review-and-quality](./code-review-and-quality.md) | Reviewing a diff, hardening code, or preparing changes for merge. |
-| [git-pr-workflow](./git-pr-workflow.md) | Branches, commits, PR creation, watching the automated review, merge strategy, cleanup. |
+| [git-pr-workflow](./git-pr-workflow.md) | Branches, commits, PR creation, merge strategy, cleanup. |
+| [automated-review](./automated-review.md) | Watching a PR-bot reviewer to a settled review. Only when `[review].provider` is a PR bot. Sub-step of git-pr-workflow. |
+| [branch-updates](./branch-updates.md) | Stacking a branch, running siblings in parallel, or updating a branch from `main`. Sub-step of git-pr-workflow. |
 | [retro](./retro.md) | A ticket taught something worth keeping. Capture is a step in git-pr-workflow; rules are written in batches. |
 | [retro-synthesis](./retro-synthesis.md) | The retros `pending/` directory has reached the threshold, or a guidance doc has grown past being read. Sub-step of retro. |
 | [human-brief](./human-brief.md) | A workflow is stopping for a human and the person needs plain English. Cross-cutting — the others invoke it at their stop points. |

@@ -34,8 +34,8 @@ line says. See `execute-issue.md` § *Decisions*.
 Green pre-commit + tests, then run the code-review skill to LGTM, then `gh pr create --title "<issue-id>: <summary>" --body-file <brief>` with its Shape B brief — never `--fill`, never `--body-file` alone (prompts, fails headless).
 
 Notify the ask transport with the PR URL, then **keep going** — `gh pr create` is the middle of the
-procedure, not the end. Follow `${CLAUDE_PLUGIN_ROOT}/reference/git-pr-workflow.md`
-§ *Watching the automated review* and `execute-issue.md` § *When this skill is done*
+procedure, not the end. Follow `${CLAUDE_PLUGIN_ROOT}/reference/automated-review.md`
+(when `[review].provider` is a PR bot) and `execute-issue.md` § *When this skill is done*
 rather than restating them.
 
 Never merge, never touch main, never force-push.
