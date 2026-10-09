@@ -8,8 +8,9 @@ The review step of the spec pipeline. There are two review kinds, one per gate:
   `<[paths].specs>/<slug>/product.md` — problem, user, user-verifiable
   requirements, success metrics, non-goals. Verdict PRODUCT_READY / NOT_READY.
 - **Gate 2 — eng-design review** (`eng-design-reviewer`): adversarially reviews
-  `<[paths].specs>/<slug>/design.md` against the rubric at `[paths].principles`,
-  and for machine-checkable acceptance criteria and an agent-ready
+  `<[paths].specs>/<slug>/design.md` plus **every committed file under
+  `design/`** (one artifact), and `testing-plan.md`, against the rubric at
+  `[paths].principles`, and for machine-checkable acceptance criteria and an agent-ready
   decomposition. Verdict DESIGN_READY / NOT_READY.
 
 Both produce a round file under `<[paths].specs>/<slug>/review/round-N.md`.
@@ -32,7 +33,8 @@ Gate 2 on an edited `design.md`.
 See the full procedure in
 [`spec-pipeline.md`](./spec-pipeline.md#workflow) — this step corresponds to the
 review phase of the gate that matches the artifact under review. Compute hashes
-with `python3 ${CLAUDE_PLUGIN_ROOT}/tools/spec_hash.py` before invoking the
+with `python3 ${CLAUDE_PLUGIN_ROOT}/tools/spec_hash.py` (`design` mode for
+`design_hash`; `product_hash: null` on a design-only spec) before invoking the
 reviewer role — never by hand, and never as a placeholder — and write the round
 file per the schema in the canonical doc (setting `gate: product` or
 `gate: design`).

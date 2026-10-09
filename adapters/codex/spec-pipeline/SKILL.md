@@ -31,7 +31,12 @@ Two gates: **Gate 1 (product)** reviews `<[paths].specs>/<slug>/product.md`; **G
 (eng design)** reviews `<[paths].specs>/<slug>/design.md` against
 `the project's `[paths].principles` rubric`.
 
-1. Validate: `<[paths].specs>/<slug>/product.md` exists. A single-file `<[paths].specs>/<slug>.md` is a
+1. Validate: `<[paths].specs>/<slug>/design.md` or `product.md` exists. **No
+   `product.md` *and* no user-verifiable requirement — nothing a customer could
+   see, be billed for, or complain about — is a design-only spec**: skip Gate 1
+   and start at Gate 2; `product_hash` is null in its round files. A missing
+   `product.md` on user-visible, billable or complainable work means it has not
+   been written yet: stop and say so. A single-file `<[paths].specs>/<slug>.md` is a
    legacy **read-only** spec — stop and say it must be split into `product.md` and
    `design.md` before the pipeline can run on it (`spec-pipeline.md` § *Spec File
    Structure*).
@@ -43,7 +48,7 @@ Two gates: **Gate 1 (product)** reviews `<[paths].specs>/<slug>/product.md`; **G
    round** → batch author decisions as Shape A briefs
    (`.cadence/reference/human-brief.md`), never raw round-file prose.
    Claude Code has a picker, so use `AskUserQuestion`; fall back to
-   `python3 python3 .cadence/tools/ask.py ask` (block on reply) only when the
+   `python3 .cadence/tools/ask.py ask` (block on reply) only when the
    author is not in the session.
    - **STOP RULE — the loop enforces this, not the reviewer.** Apply the state
      table in `spec-pipeline.md` § *The rule: freeze the artifact at the first
@@ -75,30 +80,35 @@ Two gates: **Gate 1 (product)** reviews `<[paths].specs>/<slug>/product.md`; **G
      it. On the next run the drafter — gated on `product.md` being on `main` —
      writes `design.md` and the loop continues at Gate 2.
    - Repeat until DESIGN_READY.
-4. At DESIGN_READY: stop editing `design.md`, write `carried-advisories.md` per
+4. At DESIGN_READY: first run the cross-artifact validation pass
+   (`spec-pipeline.md` § *Gate-specific reviews do not read across the
+   boundary*); a weaker AC reopens Gate 1. Then stop editing the design artifact, write `carried-advisories.md` per
    step 3 and `<[paths].specs>/<slug>/review/ack-round-N.md` — the decomposition, advisory open
    items and cumulative mechanical-edit changelog written as a **Shape B change
    brief** (`.cadence/reference/human-brief.md`), not raw round-file
    prose, since the author is ratifying edits made without asking. Then open the
-   **design PR** (`spec(design): <slug>` with `design.md` + Gate 2 rounds +
+   **design PR** (`spec(design): <slug>` with `design.md` + any
+   `<slug>/design/` sub-designs + `testing-plan.md` if present + Gate 2 rounds +
    `carried-advisories.md` + ack) and **STOP** for author review + merge.
    **The author's PR approval is the acknowledgment — do not send a separate
-   ack request**; the brief is read on the PR. File the
+   ask-tool ack request**; the brief is read on the PR. File the
    **decomposition** to the tracker after the design
    PR merges — different from the advisory follow-up issues in step 3, which are filed
    *before* the gate's PR so their ids land in `carried-advisories.md`. Only the task
    graph waits for the merge. See
    the [PR Gates] and [Acknowledgment] sections of the canonical doc.
 5. Circuit breaker: if blockers do not strictly decrease over 3 consecutive
-   rounds, escalate all open questions to author via `.cadence/tools/ask.py`.
+   rounds, escalate all open questions to author via `python3 .cadence/tools/ask.py ask`.
 
 Compute hashes via `python3 .cadence/tools/spec_hash.py` before each review
-invocation (`spec` mode on `product.md` / `design.md`). Invoke
+invocation: `spec` mode on `product.md`, **`design` mode on `design.md`** — only
+`design` mode covers the `design/` sub-designs, and a `spec`-mode digest would
+call the gate closed over a sub-design edit no round has read. Invoke
 `product-spec-reviewer`, `eng-design-reviewer`, and `spec-editor` by their
 registered subagent names.
 
 The `model:` above binds this turn only, and the pipeline spans many. On resuming a
-run, check the active model before continuing: `spec-pipeline.md` § *Model pins* has
+run, check the active model before continuing: `spec-pipeline.md` § *Which model runs this* has
 which pins are durable and which are not.
 
 After opening either gate PR, read the review state with `python3 .cadence/tools/review_state.py --pr <n>` and **surface every finding to the author in the handoff** — inline comments and the review body are separate surfaces. Do not apply them: an artifact edit on a gate PR reopens the gate. With `[review].provider = "none"`, say no reviewer is configured rather than reporting silence.

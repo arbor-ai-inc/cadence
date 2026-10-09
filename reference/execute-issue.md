@@ -51,6 +51,10 @@ a clean checkout of main.
      impossibility.
 
    **Correct the issue when it is wrong** — on the issue and in the PR body. Never fill a gap with a fabricated figure.
+
+   Follow [`test-authoring`](./test-authoring.md) whenever its § *When To Use*
+   applies. If the issue owns a P0 row of the spec's `testing-plan.md`, record a
+   break-it result or *not audited* in the PR.
 5. Questions: any genuine ambiguity → a Shape A decision brief
    ([`human-brief`](./human-brief.md)) sent via
    `python3 tools/ask.py ask "<question>" --context "<issue-id> execute"`.

@@ -13,13 +13,55 @@ after its gate closed has re-opened that gate, and nothing else notices.
 
 Usage:
   python3 tools/spec_hash.py spec    <path>   # whole-file hash
+  python3 tools/spec_hash.py design  <path>   # design.md + its sub-designs
   python3 tools/spec_hash.py product <path>   # single-file layout, section slice
 
 Two-file layout (recommended): a spec is <specs>/<slug>/product.md plus
 <specs>/<slug>/design.md, where <specs> is [paths].specs from cadence.toml.
-Both gate hashes use whole-file "spec" mode:
-  product_hash = spec_hash.py spec <specs>/<slug>/product.md
-  design_hash  = spec_hash.py spec <specs>/<slug>/design.md
+  product_hash = spec_hash.py spec   <specs>/<slug>/product.md
+  design_hash  = spec_hash.py design <specs>/<slug>/design.md
+
+"design" mode exists because a large design splits into an HLD (design.md) plus
+sub-designs under <specs>/<slug>/design/, and those files are one Gate 2 artifact:
+a verdict that named only design.md's bytes would leave a sub-design edit
+invisible to the freeze rule. It covers every file on disk under design/, at any
+depth and whatever the extension — a .json fixture or design/storage/detail.md
+is as much part of the artifact as design/storage.md, and omitting it would
+leave a hole exactly where someone would put content to keep it out.
+
+Four things are refused rather than silently included or skipped, because each
+one is a way for the artifact to stop being what the digest says it is: a
+symlink, including design/ itself (its target is outside the spec, so edits
+there would be invisible, and a relative link to a sibling spec would make this
+hash move when that one is edited); a path containing a control character (the
+record separator below is a newline, so such a name can spell a second record);
+an unreadable file; and an unreadable directory, which os.walk would otherwise
+drop silently, yielding a valid-looking digest for content it never read.
+
+Dot-prefixed entries ARE skipped, silently and deliberately: .DS_Store and
+editor swap files would otherwise re-open the gate whenever someone opened the
+folder in Finder. Note what this trades — a committed design/.notes.md is
+skipped here and by the reviewer's glob, so it is content in the directory that
+neither the freeze rule nor the unindexed-file rule can see. That is accepted as
+the lesser cost, not as a claim that no hole exists: .gitignore covers
+.DS_Store and *.swp, not dotfiles in general.
+
+The digest composes per-file digests rather than concatenating file contents:
+
+    design_hash = sha256(
+        <canonical design.md digest> + "\n" +
+        "".join("%s %s\n" % (relative path, that file's canonical digest))
+    )
+
+Composing digests rather than bytes is what keeps the file set itself part of
+the hash. An earlier form appended each file's lines behind a "## FILE <name>"
+separator, and a sub-design whose body contained that literal line could forge
+the boundary: one file holding "A\n## FILE b.md\nB" hashed the same as two files
+holding "A" and "B". A digest cannot be spelled by the content it summarizes.
+
+**Unsplit designs hash identically in both modes.** With no design/ directory
+there is nothing to compose, so "design" mode returns the plain "spec" digest
+and every design_hash already recorded in a round file stays reproducible.
 
 Single-file layout: <specs>/<slug>.md with '## Section 1' / '## Section 2'
 headings. There, product_hash is the Section 1 slice:
@@ -40,6 +82,7 @@ Product extraction:
   - the '## Section 1' heading line itself IS included, so editing that
     heading changes product_hash (this is intended).
 """
+import os
 import sys
 import hashlib
 
@@ -73,6 +116,86 @@ def product_slice(lines):
     if end is None:
         end = len(lines)
     return lines[start:end]
+
+
+def sub_design_paths(design_path):
+    """Every file on disk under the sibling design/ directory, at any depth.
+
+    On disk, not committed: an untracked stray (an editor backup, a draft) moves
+    the digest too, so keep design/ to the files the design PR will carry.
+
+    Sorted by POSIX relative path (codepoint order, locale-independent) and
+    returned as (relative path, absolute path) pairs, because the path is part
+    of what is hashed: a rename has to move the digest as much as an edit does.
+    Dot-prefixed names are skipped; symlinks and control characters in a path
+    are errors. See the module docstring for why each.
+    """
+    directory = os.path.join(os.path.dirname(design_path) or ".", "design")
+    # islink BEFORE isdir: isdir() follows the link, so it is false for a broken
+    # link and for one pointing at a regular file. Asking isdir() first would
+    # send both down the "no sub-designs" path and print an HLD-only digest for
+    # a spec that has a committed design entry.
+    if os.path.islink(directory):
+        sys.exit(
+            "ERROR: %s is a symlink; design_hash covers a directory inside the "
+            "spec, not a link to one elsewhere" % directory
+        )
+    if not os.path.isdir(directory):
+        return []
+
+    def unreadable(exc):
+        # os.walk swallows listing errors by default, which would drop a whole
+        # subtree and still print a digest. Fail instead.
+        sys.exit("ERROR: cannot list %s: %s" % (exc.filename, exc))
+
+    found = []
+    for root, dirs, names in os.walk(directory, onerror=unreadable):
+        dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+        for name in dirs:
+            if os.path.islink(os.path.join(root, name)):
+                sys.exit(
+                    "ERROR: %s is a symlinked directory; design_hash cannot "
+                    "cover a target outside the spec" % os.path.join(root, name)
+                )
+        for name in sorted(names):
+            if name.startswith("."):
+                continue
+            absolute = os.path.join(root, name)
+            if os.path.islink(absolute):
+                sys.exit(
+                    "ERROR: %s is a symlink; design_hash covers files, not "
+                    "aliases to them" % absolute
+                )
+            relative = os.path.relpath(absolute, directory).replace(os.sep, "/")
+            if any(ord(ch) < 32 for ch in relative):
+                sys.exit(
+                    "ERROR: %s contains a control character; the digest "
+                    "separates records by newline" % absolute
+                )
+            found.append((relative, absolute))
+    return sorted(found)
+
+
+def design_hash(design_path, lines):
+    """design.md's digest, then one (path, digest) line per sub-design."""
+    own = canonical_hash(lines)
+    parts = sub_design_paths(design_path)
+    if not parts:
+        return own
+    composed = [own]
+    for relative, absolute in parts:
+        try:
+            with open(absolute, "rb") as fh:
+                raw = fh.read()
+        except OSError as exc:
+            sys.exit("ERROR: cannot read %s: %s" % (absolute, exc))
+        try:
+            digest = canonical_hash(normalized_lines(raw.decode("utf-8")))
+        except UnicodeDecodeError:
+            # A non-text artifact under design/ still belongs to the set.
+            digest = hashlib.sha256(raw).hexdigest()
+        composed.append("%s %s" % (relative, digest))
+    return hashlib.sha256(("\n".join(composed) + "\n").encode("utf-8")).hexdigest()
 
 
 def selftest():
@@ -131,16 +254,25 @@ def selftest():
 def main():
     if len(sys.argv) == 2 and sys.argv[1] == "--selftest":
         sys.exit(selftest())
-    if len(sys.argv) != 3 or sys.argv[1] not in ("spec", "product"):
-        sys.exit("usage: spec_hash.py {spec|product} <path>\n       spec_hash.py --selftest")
+    if len(sys.argv) != 3 or sys.argv[1] not in ("spec", "design", "product"):
+        sys.exit("usage: spec_hash.py {spec|design|product} <path>\n       spec_hash.py --selftest")
     mode, path = sys.argv[1], sys.argv[2]
+    if mode == "design" and os.path.basename(path) != "design.md":
+        sys.exit(
+            "ERROR: design mode hashes a spec's design.md together with its "
+            "design/ sub-designs; got %s" % path
+        )
     try:
         with open(path, encoding="utf-8") as fh:
             lines = normalized_lines(fh.read())
     except OSError as exc:
         sys.exit("ERROR: cannot read %s: %s" % (path, exc))
+    except UnicodeDecodeError as exc:
+        sys.exit("ERROR: %s is not valid UTF-8: %s" % (path, exc))
     if mode == "spec":
         print(canonical_hash(lines))
+    elif mode == "design":
+        print(design_hash(path, lines))
     else:
         print(canonical_hash(product_slice(lines)))
 

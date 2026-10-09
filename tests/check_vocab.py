@@ -5,7 +5,7 @@ check_no_leaks.py is a denylist: it catches what someone thought to list, and
 nothing else. Spec names, PR numbers and table names reached the public tree
 because nobody had listed them. This check derives its list instead: every
 distinctive file and directory name in the private repos you point it at
-(`campaign-pacing`, `golden_hashes`), minus cadence's own names and the
+(`order-sync`, `fixture_hashes`), minus cadence's own names and the
 generic terms in tests/vocab_allow.txt. The list is built at run time and never
 written down, so the check publishes nothing.
 
@@ -52,7 +52,10 @@ EDGE = r"A-Za-z0-9"
 
 
 def git_files(repo: Path) -> list[str]:
-    out = subprocess.run(["git", "-C", str(repo), "ls-files"], capture_output=True,
+    """Tracked files, and new ones not yet added: a check run before `git add`
+    must still see them."""
+    out = subprocess.run(["git", "-C", str(repo), "ls-files", "--cached", "--others",
+                          "--exclude-standard"], capture_output=True,
                          text=True, check=True).stdout
     return out.splitlines()
 
@@ -153,7 +156,9 @@ def selftest() -> int:
         subprocess.run(["git", "init", "-q", d], check=True)
         (Path(d) / "hidden-thing.txt").write_text("x")
         subprocess.run(["git", "-C", d, "add", "."], check=True)
+        (Path(d) / "new-unadded.txt").write_text("x")
         check("names come from tracked files", "hidden-thing" in names(git_files(Path(d))))
+        check("and from files not yet added", "new-unadded" in names(git_files(Path(d))))
     check("the allow file parses", isinstance(load_allow(ALLOW.read_text())[0], list))
     for f in failures:
         print(f"selftest: {f}", file=sys.stderr)
