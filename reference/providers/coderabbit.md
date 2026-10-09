@@ -75,7 +75,7 @@ been confidently wrong.
   paused itself, and still spends an attempt). `resolve` records answers and closes threads; it
   does not ask for a look, and neither does a reply or a push once
   `auto_pause_after_reviewed_commits` has fired. A round that ends at `resolve` ends with
-  nothing scheduled (`git-pr-workflow` § *Requesting the re-review*).
+  nothing scheduled (`automated-review` § *Requesting the re-review*).
 - **Ask for `resolve`, not `approve`.** Resolving records that every finding has an
   answer, which is a true statement you can defend. Approving asks the bot to bless a diff
   whose findings you partly declined — a green check you did not earn, and the human

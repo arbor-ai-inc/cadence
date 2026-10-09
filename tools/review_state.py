@@ -17,7 +17,7 @@ agents how to read it by hand. Four signals render a passing state for a review 
 
 Not decided here, and `action == "LANDED"` is ONE THIRD of done: whether every
 finding is answered, whether the reviewer's block is cleared, batching, escalation,
-the three-round bound. reference/git-pr-workflow.md § *The terminal condition* is three parts; this
+the three-round bound. reference/automated-review.md § *The terminal condition* is three parts; this
 reports part 1. The others are judgment and live there.
 
 Usage:
@@ -223,7 +223,7 @@ def evaluate(
         # NORMAL completion, and unlike the rate-limit anchor this one does not fail
         # safe -- a false positive halts the loop and sends a human to remove a cause
         # from a PR that is perfectly eligible. Re-asking does nothing
-        # -- git-pr-workflow.md § *When no check row appears* is
+        # -- automated-review.md § *When no check row appears* is
         # remove-the-cause-then-retrigger -- so a monitor dispatching ASK here would
         # loop forever against a PR nothing will review. Only visible at all once the
         # description started reaching this function.
