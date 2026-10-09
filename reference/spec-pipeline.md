@@ -306,7 +306,7 @@ blockers do not count against the cap.
 **Once unresolved blockers are at zero, at most 3 advisories are written out in
 full.** A gate is closing; the reviewer's remaining job is to say so, not to fill a
 budget. Zero is the expected number — see [Closing A Gate](#closing-a-gate). This
-is a hard limit, not a weighting: `publisher-metrics` produced 44 advisory majors
+is a hard limit, not a weighting: spec A produced 44 advisory majors
 after its gates had already closed, every one of them under prose that merely asked
 the reviewer to weigh proportionality.
 
@@ -415,18 +415,18 @@ that had already issued a READY verdict:**
 
 | spec | rounds | rounds at 0 blockers after close |
 |---|---|---|
-| `publisher-metrics` | 34 | **21** |
-| `serving-path-integrity` | 7 | 4 |
-| `lighthouse-chat` | 6 | 3 |
-| `reporting-data-foundation` | 8 | 3 |
-| `declarative-creatives` | 17 | 2 |
-| `line-item-cleared-spend-store` | 6 | 1 |
-| `config-versioning-audit` | 5 | 1 |
+| spec A | 34 | **21** |
+| spec B | 7 | 4 |
+| spec C | 6 | 3 |
+| spec F | 8 | 3 |
+| spec D | 17 | 2 |
+| spec E | 6 | 1 |
+| spec G | 5 | 1 |
 
 The four legacy `specs/*.review/` directories are excluded — 39 further round files,
 32% of the 122 in the tree — so the real figure is if anything understated.
 
-`publisher-metrics` reached PRODUCT_READY at round 4 and DESIGN_READY at round 22,
+spec A reached PRODUCT_READY at round 4 and DESIGN_READY at round 22,
 then ran **26 further rounds** and 15,002 lines of review over 13 days. It needed two
 acknowledgments because the design grew 76 → 94 criteria *between the ack and the
 merge*. Round 19 is a five-audit review of one edited sentence. Its `design-round-10`
@@ -444,7 +444,7 @@ Two individually-correct rules compose into an unbounded loop:
 So: READY → an advisory nit is fixed → the hash invalidates → a re-review is now
 *mandatory* → a fresh-context reviewer re-reads the artifact and the 592-line
 principles doc → finds new advisory material in prose it has not seen → edit →
-repeat. `publisher-metrics` reached MINOR-74 and MAJOR-72 this way.
+repeat. spec A reached MINOR-74 and MAJOR-72 this way.
 
 ### The rule: freeze the artifact at the first READY verdict
 
@@ -509,7 +509,7 @@ correct one.
 ### Batch blocker fixes
 
 Fix every blocker in a round in **one** editor pass, then re-review once.
-`declarative-creatives` went 4 → 3 → 2 → 1 → 0 blockers across four rounds — one
+spec D went 4 → 3 → 2 → 1 → 0 blockers across four rounds — one
 blocker per round, each costing a full reviewer invocation. Blockers within a round
 are independent; nothing requires clearing them serially.
 
@@ -526,7 +526,7 @@ in the gate's PR beside the round files. It costs nothing in hash terms: `spec_h
 hashes `product.md` / `design.md` only, never the review directory, so adding this file
 cannot disturb a verdict.
 
-`publisher-metrics` invented the idea, and its file is the **ancestor, not the
+spec A invented the idea, and its file is the **ancestor, not the
 template** — it predates this schema, groups advisories into "input to Gate 2" /
 "remaining" / "not carried" buckets rather than itemising them, and carries a prose
 `status:` line instead of a verdict. Do not copy its shape. Going forward the file
@@ -548,7 +548,7 @@ reading, since next-gate design work is also "work someone does later":
    implementation or process work after the spec closes: a capability gap, a
    durability or correctness concern, a boundary that wants revisiting. File it
    against the team with the label `<slug>-followup` (e.g.
-   `publisher-metrics-followup`), and give it the context that makes it actionable
+   `<slug>-followup`), and give it the context that makes it actionable
    months later: the finding as written, the round it came from, the spec and hash it
    was raised against, and — the part that is usually missing — **why it was filed
    rather than fixed in the gate.** Record the issue id back in
@@ -742,7 +742,7 @@ author approves and the artifact that merges are the same commit. Reclassifying 
 mechanical edit instead reopens the loop.
 
 **Do not ask for an ack before opening the PR.** Acking a `design_hash` that the
-pipeline then keeps editing is what forced `publisher-metrics` to ack twice: the
+pipeline then keeps editing is what forced spec A to ack twice: the
 design moved 76 → 94 criteria and 14 → 15 tasks between `ack-round-29` and
 `ack-round-32`, invalidating the first assent. Approval on the PR cannot drift from
 what it approved.
