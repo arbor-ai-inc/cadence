@@ -176,6 +176,15 @@ When the three-round circuit breaker fires:
   before fixing it — a demonstration turns an argument into a fact.
 - **When a reviewer offers a measurement, that is the finding to act on first.**
 - **Prefer narrow reviewers over broad ones** — one question each.
+- **Read across the open queue.** Two PRs touching *different* files can still break
+  `main` together (two migrations naming one parent). When a PR adds a migration,
+  package `__init__` or registry entry, run the covering test on the merged tree
+  (`git merge-tree --write-tree pr-a pr-b`, then `git archive` that OID); a clean
+  `merge-tree` means it applies, not that it is valid.
+- **A test double quieter than the real dependency** (no stderr, always 200) makes the
+  assertion decorative. Patch below the contract.
+- **After `main` is merged in**, read `git show --remerge-diff` and recount keys in
+  generated files. Pin a posted review to `headRefOid`.
 
 ## Guards, Shells, And Threads That Do Not Close
 

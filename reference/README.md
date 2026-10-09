@@ -66,6 +66,7 @@ flowchart TD
 | [branch-updates](./branch-updates.md) | Stacking a branch, running siblings in parallel, or updating a branch from `main`. Sub-step of git-pr-workflow. |
 | [retro](./retro.md) | A ticket taught something worth keeping. Capture is a step in git-pr-workflow; rules are written in batches. |
 | [retro-synthesis](./retro-synthesis.md) | The retros `pending/` directory has reached the threshold, or a guidance doc has grown past being read. Sub-step of retro. |
+| [explain-plain](./explain-plain.md) | Explaining or summarizing any source in plain English for a non-technical reader. |
 | [human-brief](./human-brief.md) | A workflow is stopping for a human and the person needs plain English. Cross-cutting — the others invoke it at their stop points. |
 | [skill-anatomy](./skill-anatomy.md) | Authoring or updating a workflow, upstream or your own. |
 

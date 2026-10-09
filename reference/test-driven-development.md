@@ -137,10 +137,14 @@ so the audit passes over a file it never read.
 - **Build the fixture from where the message is constructed, not from what the
   message ought to look like** — otherwise the fixture agrees with the bug. Open the
   construction site and copy the shape from there.
-- **A suite parametrised over a directory listing passes vacuously over an empty
-  directory.** Every such suite needs an explicit non-empty guard as its first test.
-- **Check the skip count, not just the pass count** — an uninstalled test dependency
-  makes tests *skip*, and the run looks green either way.
+- **An assertion over a collection passes vacuously when it is empty** — `all(...)`, a
+  loop of asserts, a sum, a parametrisation over a listing. Assert non-empty *first*, in
+  the same test. Not when emptiness *is* the expected result ("no events emitted").
+- **Check the skip count, not just the pass count** — an uninstalled dependency or
+  absent database makes tests *skip*, and the run looks green either way. A guard that
+  reads files outside its module needs a cache-busting run (`go test -count=1`).
+- **A benchmark needs a correctness assertion over the same run** as its timing, or it
+  measures whatever it was pointed at (`benchmark-has-no-verdict`, 4 times).
 - **An assertion that a value is *absent* passes when the value is absent from the
   fixture too.** Pin the fixture's conformance, or add a positive control in the same
   block. JS footgun: **string** `includes` coerces — `"…undefined…".includes(undefined)`
@@ -185,6 +189,9 @@ a debt. Discharge it one of two ways:
 2. **Downgrade the prose to intent:** *"Intended; not enforced — see <issue-id>"*. A
    property stated as fact and enforced by nothing is worse than no comment — it stops
    the next reader from checking.
+3. **In an architecture or state doc, write the test that reads the doc** — no hook
+   reads prose. Scope it to the field's own table **row and column**: a whole-section
+   `Contains` passes on the prose beside the table.
 
 **Three shapes to watch for:**
 
@@ -212,6 +219,9 @@ manifest.** A suite with no CI job is recorded as such **with an issue id** —
 enumerated, never silent. Adding a suite means adding a row. **A check is only as good
 as the classes it enumerates** ([`C-10`](../examples/case-studies.md#c-10--suites-nobody-run)),
 so the discovery step must itself be mutation-tested over each class it claims to cover.
+**Give the manifest a local runner and run all of it before pushing** — a shared-artifact
+change fires guards in suites it does not seem to touch. Report passed, failed and
+*unavailable* (could not run here) separately.
 
 **A migration nothing executes.** If a project builds its test schema by creating
 tables directly from the models, the migration files are never run. A migration is covered by exactly

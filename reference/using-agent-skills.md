@@ -46,12 +46,22 @@ canonical statement, thin routes to it.
    operations, security, or roadmap facts.
 6. State the routing decision briefly, then follow the selected workflow.
 
+**Route the model by phase, not by task:** the least expensive model likely to
+finish the phase — a cost-sensitive one for mechanical work with a deterministic
+check, a balanced one for ordinary implementation, a strong independent one for
+adversarial review, and the most capable only for a named, consequential question
+cheaper models and evidence left open. Tests and fresh-context review decide
+whether the cheaper model succeeded; size or one failed attempt is no reason to
+escalate. **A delegated skill run must invoke the skill by name or pass its
+model explicitly** — an agent merely told to follow one inherits the caller's model.
+
 ## Routing Guide
 
 | Situation | Use |
 |---|---|
 | Need to define what to build | [`spec-driven-development`](./spec-driven-development.md) |
 | Need to prove behavior works | [`test-driven-development`](./test-driven-development.md) |
+| Explain or summarize something for a non-technical reader | [`explain-plain`](./explain-plain.md) |
 | Need merge readiness or quality review | [`code-review-and-quality`](./code-review-and-quality.md) |
 | Need branch, commit, PR, merge, or cleanup flow | [`git-pr-workflow`](./git-pr-workflow.md) |
 | Need to pick up a tracked issue and implement it | [`execute-issue`](./execute-issue.md) |

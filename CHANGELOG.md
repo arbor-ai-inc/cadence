@@ -3,6 +3,25 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.7.0
+
+New rules from the source project's recent retros, in the short style, within budget.
+
+- **code-review:** a docs-only diff is all claims; a quoted spec sentence is a premise;
+  sweep the dimension, not only the phrase; stop means stop after round 3, and a commit
+  after the last review is named in the PR.
+- **automated-review:** check all three parts of the terminal condition every round;
+  one push per fix round, never during a running review; refills are per developer.
+- **git-pr-workflow:** re-run the suites with `main` merged in before merging.
+- **code-review-and-quality:** read across the open queue (merged-tree test for
+  migrations, `__init__` and registries); quiet test doubles; remerge-diff.
+- **test-driven-development:** anti-vacuity stated over the property; benchmarks need a
+  correctness assertion; cached runs; tests that read docs; a local suite runner.
+- **using-agent-skills:** route the model by phase; delegated skill runs pass the model.
+- **retro-synthesis:** check the ledger against raw fragment text.
+- **execute-issue:** quoted premises; "what calls this" is a reachability question.
+- **New skill: `explain-plain`.**
+
 ## 0.6.0
 
 Leaner docs: an issue run now loads roughly half what it did. No rule was removed.
