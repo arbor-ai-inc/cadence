@@ -179,11 +179,46 @@ When the code-review circuit breaker fires:
   `main` together (two migrations naming one parent). When a PR adds a migration,
   package `__init__` or registry entry, run the covering test on the merged tree
   (`git merge-tree --write-tree pr-a pr-b`, then `git archive` that OID); a clean
-  `merge-tree` means it applies, not that it is valid.
+  `merge-tree` means it applies, not that it is valid. Run it as a script under
+  `set -euo pipefail`: a failed `fetch` leaves stale refs, `merge-tree` exits non-zero
+  and still prints a tree, and a trailing `rm` replaces the test's exit status.
+  Three more places a change meets work outside its own diff:
+  - **One outside fact, two specs.** Each verified its own sentence about the same
+    platform behavior, and they disagreed. Grep the other specs for the shared premise.
+  - **A guard in a component the diff never touched.** A schema change in one
+    component broke another component's guards that read the same model. Run that
+    suite too.
+  - **A ruling reopened by the next PR.** State a ruling as a property of the
+    responsibility ("every writer of `status` re-checks X"), then grep for the guard.
+
+  A claim about the other PRs ("no other open PR adds a migration") needs the full
+  list: `gh pr list` stops at 30 unless `--limit` is at least the open count.
 - **A test double quieter than the real dependency** (no stderr, always 200) makes the
   assertion decorative. Patch below the contract.
 - **After `main` is merged in**, read `git show --remerge-diff` and recount keys in
-  generated files. Pin a posted review to `headRefOid`.
+  generated files.
+
+## Before You Close A Question
+
+Each of these caught a question closed on evidence that could not settle it.
+
+- **A search that cannot match.** Hard-wrapped prose splits a phrase across lines, so
+  a literal search finds nothing. Search across lines (`rg -U -i 'nothing\s+can\s+set'`)
+  and read whole sections (`sed -n '/^### X/,/^### Y/p'`), not a guessed line range
+  (§ *Habits*, *A sweep answers*). A negative claim needs this most; see `code-review.md`
+  § *A claim the diff asserts is not evidence*.
+- **Check the path, not a description of it.** A deploy flag, README or cited decision
+  describes a path; it does not enforce it. A service deployed as private was still
+  reachable through a public endpoint that forwarded to it. A security claim needs the
+  line that enforces it.
+- **A deferral that names a ticket claims the ticket covers it.** Open the ticket: is it
+  still open, and does its scope include what is deferred?
+- **Before changing a bare number in a guard,** find why it is that number:
+  `git log -S '<literal>' -- <file>`, then that commit's PR.
+- **A claim about a dependency holds only at the version the repo pins.** Read it
+  there, not at the latest release.
+- **On a re-review, read at least one section you raised nothing about.** Confirming
+  your own findings closed measures the author's reply, not the change.
 
 ## Guards, Shells, And Threads That Do Not Close
 
@@ -234,6 +269,18 @@ Fix: The smallest reasonable correction or direction.
 ```
 
 For normal final review responses, lead with findings and keep summaries brief.
+
+## Posting A Review
+
+- Set `commit_id` to `headRefOid`, never the merge commit, and re-read the head just
+  before posting: authors push mid-review.
+- Take every `file:line` from the PR head or a freshly fetched `origin/main`, never a
+  local `main`.
+- Anchor inline comments only on lines inside the diff hunks
+  (`git diff -U0 <base>...<head> | grep '^@@'`). One comment outside them fails the whole
+  review with 422 *"Line could not be resolved"*, and nothing posts.
+- A comment on a deleted line takes `side: LEFT` and the old line number. Afterwards,
+  list `…/pulls/<n>/comments` for your review id and check each `path` and `line`.
 
 ## Change Sizing
 
