@@ -26,7 +26,7 @@ batching), follow `${CLAUDE_PLUGIN_ROOT}/reference/spec-pipeline.md` exactly.
 
 Two gates: **Gate 1 (product)** reviews `<[paths].specs>/<slug>/product.md`; **Gate 2
 (eng design)** reviews `<[paths].specs>/<slug>/design.md` against
-`the project's `[paths].principles` rubric`.
+the project's `[paths].principles` rubric.
 
 1. Validate: `<[paths].specs>/<slug>/design.md` or `product.md` exists. **No
    `product.md` *and* no user-verifiable requirement — nothing a customer could

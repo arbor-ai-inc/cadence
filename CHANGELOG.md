@@ -3,6 +3,26 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.10.1
+
+Fixes for projects that vendor cadence.
+
+- **Overlays reach every workflow you follow.** A wrapper used to send the agent to
+  its own overlay only, so a workflow that execute-issue merely links to (say,
+  git-pr-workflow) ran without its project rules. Now, following any
+  `.cadence/reference/<name>.md`, or a persona under `reference/personas/`, means
+  reading `<overlays>/<name>.md` too. Regenerate your wrappers.
+- **`wrappers.py --check` works in a linked git worktree.** It checks that
+  worktree's own wrappers, `.cadence/` and `cadence.toml`. It used to refuse, so an
+  always-on pre-commit hook was red in every worktree. The worktree needs
+  `git submodule update --init` like any checkout.
+- **`[[must_stop]]` keeps a leading dot.** `.github/` was stored as `github/`: it
+  still caught `.github/...` paths, but also caught a `github/` directory and printed
+  the wrong path.
+- Text: the security-auditor persona's garbled "customer, customer or tenant data",
+  and broken backticks around `[paths].principles` in the spec-pipeline skill and
+  the eng-design-reviewer agent.
+
 ## 0.10.0
 
 For projects that vendor cadence and have their own conventions. Every new setting,

@@ -59,7 +59,7 @@ so you review the design against the current system rather than a blank slate
    **Grade that claim**: the test is nothing a customer could see, be billed for,
    or complain about. A goal naming such an outcome needed Gate 1 — a **BLOCKER**,
    `decision: author`, whose remedy is a `product.md`, not a rewording.
-3. `the project's `[paths].principles` rubric` — the guardrails.
+3. the project's `[paths].principles` rubric — the guardrails.
 3a. `<specs>/<slug>/testing-plan.md`, if present — judged for pass 6a, with
     `${CLAUDE_PLUGIN_ROOT}/reference/test-authoring.md` § *From a spec* for its form.
 4. **What already exists** (so you know what's built and where this design fits):
