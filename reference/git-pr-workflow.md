@@ -190,6 +190,10 @@ there. Read it before assuming a PR needs an approval, or that it does not.
   say the same thing unconditionally.
 - Prefer follow-up commits during review. Squash merge can clean up the final
   history when intermediate commits are not meaningful.
+- **Archive a stale PR by closing it, with a comment saying why.** Nothing is lost:
+  GitHub keeps `refs/pull/<n>/head` after an unmerged close and after the branch is
+  deleted (`git fetch origin pull/<n>/head:<branch>` brings it back). Converting to
+  draft leaves it in the open-PR list.
 
 ## Merge Strategy
 

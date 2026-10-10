@@ -3,6 +3,33 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.11.0
+
+Review and explanation lessons from the source project, rewritten in the short style.
+
+- **explain-plain has a tutor mode.** When the reader asks to be walked through or
+  taught, the skill teaches 2-4 ideas, one per turn, pausing with a check question,
+  hinting rather than correcting. Written mode is still the default; the takeaway
+  rule, Red Flags and Verification now say which mode they cover. A new row in the
+  numbers table gives the tutor limits' basis. Regenerate your wrappers to pick up
+  the new description.
+- **code-review-and-quality:**
+  - New § *Before You Close A Question*: searches that cannot match wrapped prose,
+    descriptions taken for enforcement, deferrals to tickets that don't cover them,
+    bare numbers changed without `git log -S`, dependency claims checked at the wrong
+    version, and re-reviews that only re-read your own findings.
+  - New § *Posting A Review*, after *Finding Format*: pin to the head (moved here
+    from *Habits*), take `file:line` from the head, anchor only inside diff hunks
+    (one comment outside fails the whole review with 422), `side: LEFT` for deleted
+    lines, and check where each comment landed.
+  - *Read across the open queue* now names three more places a change meets work
+    outside its diff, how the composition check hides its own failure, and
+    `gh pr list`'s 30-item default.
+- **git-pr-workflow:** archive a stale PR by closing it; its ref survives.
+- **Budgets raised:** `code-review-and-quality.md` 14000 → 17000 and
+  `explain-plain.md` 7000 → 9500 bytes. Each addition is a rule or step the source
+  project hit at least once, with at most a one-sentence example.
+
 ## 0.10.1
 
 Fixes for projects that vendor cadence.
