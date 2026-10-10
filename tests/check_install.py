@@ -311,6 +311,8 @@ def vendored_first_hour(tmp: Path, plugin: Path, check) -> None:
         check(f"vendored: {rel} has no plugin-root path", "${CLAUDE_PLUGIN_ROOT}/" not in text)
         check(f"vendored: {rel} has no /cadence: prefix", "/cadence:" not in text)
         check(f"vendored: {rel} names its overlay", "docs/overlays/" in text)
+        check(f"vendored: {rel} extends overlays to the docs it links to",
+              "docs/overlays/<name>.md" in text and "reference/personas/<name>.md" in text)
         for target in set(re.findall(r"\.cadence/[\w./-]+[\w/]", text)):
             check(f"vendored: {rel} points at {target}, which exists",
                   (proj / target.split("#")[0]).exists())
@@ -368,6 +370,23 @@ def vendored_first_hour(tmp: Path, plugin: Path, check) -> None:
     p = run(wrap, proj, env)
     check("vendored: a pin naming no skill or agent fails", p.returncode == 1 and "code-reveiw" in p.stderr)
     (proj / "cadence.toml").write_text(base)
+
+    # A linked worktree checks its own wrappers against its own .cadence/, so the
+    # pre-commit gate passes there too, not only in the main checkout.
+    run(wrap, proj, env)
+    git("add", "-A", cwd=proj)
+    git("commit", "--quiet", "-m", "wrappers", cwd=proj)
+    wt = tmp / "vproj-wt"
+    git("worktree", "add", "--quiet", "-b", "wt", str(wt), cwd=proj)
+    git("-c", "protocol.file.allow=always", "submodule", "update", "--init", "--quiet", cwd=wt)
+    p = run([*wrap, "--check"], wt, env)
+    check("vendored: --check passes in a linked worktree", p.returncode == 0, p.stderr.strip()[:200])
+    wt_claude = wt / ".claude" / "skills" / "code-review" / "SKILL.md"
+    wt_claude.write_text(wt_claude.read_text() + "hand edit\n")
+    p = run([*wrap, "--check"], wt, env)
+    check("vendored: --check in a worktree reads the worktree's files", p.returncode == 1)
+    p = run([*wrap, "--check"], proj, env)
+    check("vendored: ...not the main checkout's", p.returncode == 0, p.stderr.strip()[:200])
 
 
 if __name__ == "__main__":

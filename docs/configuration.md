@@ -172,7 +172,10 @@ A directory of per-workflow addenda, `<overlays>/<name>.md`: `code-review.md`,
 `execute-issue.md` and so on. Unset by default.
 
 When it is set, every wrapper `wrappers.py` generates ends by telling the agent
-to read the matching overlay after the canonical doc, if one exists. That is
+to read the matching overlay after the canonical doc, if one exists, and to do the
+same for every other cadence doc it follows from there, skill or persona, even by a
+link: `<overlays>/<name>.md` for `reference/<name>.md` and
+`reference/personas/<name>.md`. That is
 where a project's own rules go: data that must never reach a log, a deploy step
 your PRs need, an extra BLOCKER class for your domain. **An overlay adds; it
 never removes or relaxes a cadence rule.** If a cadence rule is wrong for

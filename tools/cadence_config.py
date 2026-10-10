@@ -146,7 +146,7 @@ class Config:
         """
         hits = []
         for raw in paths:
-            norm = str(raw).strip().replace("\\", "/").lstrip("./")
+            norm = _norm_path(raw)
             if not norm:
                 continue
             for entry in sorted(self.must_stop, key=lambda e: e.path):
@@ -189,6 +189,36 @@ def repo_root(start: Path | None = None) -> Path:
     return git_dir.parent
 
 
+def _norm_path(raw: str) -> str:
+    """A repo-relative path with any leading `./` removed.
+
+    Only the `./` prefix: `lstrip("./")` would also eat the dot of `.github/`,
+    turning it into `github/`, which then matches a different directory.
+    """
+    p = str(raw).strip().replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
+    return p
+
+
+def worktree_root(start: Path | None = None) -> Path:
+    """The root of the worktree `start` is in: the main checkout, or a linked one.
+
+    For files that belong to the checkout itself, like the generated wrappers.
+    repo_root() is the main worktree on purpose, so the config a fan-out leaf
+    reads is the parent run's; this is the other question.
+    """
+    cwd = Path(start or Path.cwd()).resolve()
+    try:
+        top = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=cwd, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return cwd
+    return Path(top).resolve()
+
+
 def _require(d: dict, section: str, key: str, allowed: tuple, default: str) -> str:
     value = d.get(section, {}).get(key, default)
     if value not in allowed:
@@ -198,15 +228,17 @@ def _require(d: dict, section: str, key: str, allowed: tuple, default: str) -> s
     return value
 
 
-def load(start: Path | None = None) -> Config:
+def load(start: Path | None = None, *, root: Path | None = None) -> Config:
     """Load cadence.toml from the repo root, or return defaults if absent.
 
     A missing file is fine and documented -- the defaults need no credentials.
     A malformed or invalid file is not: it raises, because silently running on
     defaults when the author wrote a config is how a must-stop boundary
     quietly stops being enforced.
+
+    `root` reads the config of that checkout instead of the main worktree's.
     """
-    root = repo_root(start)
+    root = root or repo_root(start)
     path = root / CONFIG_NAME
     if not path.exists():
         return Config(root=root, source=None)
@@ -249,7 +281,7 @@ def load(start: Path | None = None) -> Config:
                 f"{path}: [[must_stop]] {p!r} has no reason. The reason is what an agent "
                 f"shows a human when it stops, so it is not optional."
             )
-        entries.append(MustStop(path=p.replace("\\", "/").lstrip("./"), reason=reason))
+        entries.append(MustStop(path=_norm_path(p), reason=reason))
 
     cfg = Config(
         root=root,
@@ -384,6 +416,10 @@ def selftest() -> int:
               cfg.must_stop_hits(["db/migrations-old/001.sql"]) == [])
         # Leading ./ and backslashes are normalized, since callers pass git output.
         check("./ prefix normalized", cfg.must_stop_hits(["./src/billing/rate.py"]) != [])
+        dot = Config(root=root, must_stop=(MustStop(path=_norm_path(".github/"), reason="ci"),))
+        check("a dot directory keeps its dot", dot.must_stop[0].path == ".github/")
+        check("a dot directory still matches", dot.must_stop_hits([".github/workflows/ci.yml"]) != [])
+        check("a dot directory matches only itself", dot.must_stop_hits(["github/x"]) == [])
         check("backslashes normalized", cfg.must_stop_hits([r"src\billing\rate.py"]) != [])
         # Clean paths stay clean.
         check("unrelated path is clean", cfg.must_stop_hits(["src/ui/button.tsx"]) == [])

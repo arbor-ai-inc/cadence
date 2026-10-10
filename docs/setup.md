@@ -123,8 +123,10 @@ What changes:
   It proposes the newest commit on cadence's default branch, not the newest
   tag. Every change that ships to users bumps cadence's version and gets a tag,
   so the two rarely differ, but check the tag before merging. The bump PR fails
-  the wrappers gate until someone regenerates, which is the point: the wrappers
-  just changed.
+  the wrappers gate until someone checks out its branch, runs
+  `git submodule update --init` and the regenerate command, and pushes. That is
+  the point: the wrappers just changed. Linked worktrees need the same
+  `git submodule update --init` as any checkout.
 
 **Project-specific rules** go in overlays, never in `.cadence/`. See
 [`[paths].overlays`](configuration.md#pathsoverlays--project-rules-on-top-of-a-workflow).

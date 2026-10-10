@@ -10,7 +10,7 @@ as the review process, with security as the primary lens.
 ## When To Invoke
 
 - Auth, OAuth, sessions, RBAC, tenancy, or account-boundary changes.
-- APIs that expose or mutate customer, customer or tenant data.
+- APIs that expose or mutate customer, account or billing data, or that cross a tenant boundary.
 - LLM, tool, crawler, URL fetch, prompt, or model-output handling.
 - Secret handling, logging, telemetry, dependency, or deploy changes.
 - Any change where the user explicitly asks for security review.

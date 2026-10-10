@@ -60,9 +60,12 @@ names a path under the plugin root, it is under `.cadence/` here, and a
 """
 
 OVERLAY = """
-**Project overlay.** After the canonical doc, read `{path}` if it exists.
-It adds this project's rules to this workflow; it never removes or relaxes the
-ones above.
+**Project overlays.** After the canonical doc, read `{path}` if it exists.
+The same goes for every other cadence doc you follow from here, whether you
+invoke its skill or only follow a link to it: reading
+`.cadence/reference/<name>.md` or `.cadence/reference/personas/<name>.md` means
+also reading `{dir}/<name>.md` if it exists. An overlay adds this project's
+rules; it never removes or relaxes cadence's.
 """
 
 TARGETS = {
@@ -109,7 +112,7 @@ def render(text: str, src: str, root_prefix: str, keep_claude_keys: bool,
     out = ("---\n" + "\n".join(lines).strip() + "\n---\n\n"
            + HEADER.format(marker=MARKER, src=src[len(VENDOR_DIR) + 1:]) + body.lstrip("\n"))
     if overlay:
-        out = out.rstrip("\n") + "\n" + OVERLAY.format(path=overlay)
+        out = out.rstrip("\n") + "\n" + OVERLAY.format(path=overlay, dir=overlay.rsplit("/", 1)[0])
     return out
 
 
@@ -169,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--targets", default="claude,codex",
                     help="comma-separated: claude, codex (default: both)")
     ap.add_argument("--check", action="store_true", help="verify freshness; write nothing")
-    ap.add_argument("--into", type=Path, help="project root (default: the enclosing git repo)")
+    ap.add_argument("--into", type=Path, help="project root (default: this checkout, the linked worktree if in one)")
     args = ap.parse_args(argv)
 
     targets = [t.strip() for t in args.targets.split(",") if t.strip()]
@@ -179,12 +182,14 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 1
 
+    # The wrappers belong to this checkout, so a linked worktree checks its own
+    # files against its own .cadence/ and cadence.toml, not the main worktree's.
+    project = (args.into or cadence_config.worktree_root()).resolve()
     try:
-        cfg = cadence_config.load(args.into)
+        cfg = cadence_config.load(root=project)
     except cadence_config.ConfigError as exc:
         print(f"wrappers: {exc}", file=sys.stderr)
         return 1
-    project = (args.into or cfg.root).resolve()
 
     # A wrapper that points at .cadence/ only works if cadence is there.
     vendored = project / VENDOR_DIR
