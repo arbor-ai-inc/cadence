@@ -75,6 +75,10 @@ STRUCTURAL = [
 # Every leak collapses to one token, so a private name and the generic phrase
 # that replaced it compare equal. redact() replaces only what the gate would
 # fail on: a hashed rule's shape alone matches far more than private names.
+#
+# So every content key depends on the rules AND their digest lists. Changing
+# either changes the keys: re-record the baseline at the same fork commit
+# (git worktree add <dir> <upstream_head>, then --record-baseline --source <dir>).
 LEAK_RULES = (*_leaks.RULES, _leaks.CODERABBIT)
 
 

@@ -11,11 +11,12 @@ Every pattern below was measured against the source tree before extraction.
 The counts in the comments are what was there at fork time, so a regression is
 recognisable rather than merely nonzero.
 
-The private names themselves are not in this file, so publishing the gate does
-not publish the list it guards. A rule is a generic shape (any `XX-123` id, any
-`#channel`, any email domain) plus the digests of the private values that shape
-must not carry. Only shapes that name nothing private, and the company name,
-which the licence already attributes, are plain patterns.
+The private names are not written out in this file. A rule is a generic shape
+(any `XX-123` id, any `#channel`, any email domain) plus the digests of the
+private values that shape must not carry. Only shapes that name nothing private,
+and the company name, which the licence already attributes, are plain patterns.
+That obscures the names; it does not keep them secret. Most are short common
+words, so anyone who guesses one can confirm it against its digest.
 
 Usage:
     check_no_leaks.py               # scan the whole repo; what CI and pre-commit run
@@ -63,10 +64,14 @@ class Rule:
     exempt: frozenset = field(default_factory=frozenset)
     flags: int = re.IGNORECASE
     # When set, `pattern` only finds candidates, and a candidate is a leak only
-    # if the digest of its key is listed. The key is the first group that
-    # matched, or the whole match when the pattern has no groups. The private
-    # names stay out of this public file.
+    # if the digest of its key is listed. A hashed pattern is one lookahead,
+    # `(?=(HIT))`, so it is tried at every position and one candidate can never
+    # swallow the next. Group 1 is what gets reported; the key is the first
+    # later group that matched, or group 1 when there is none.
     hashed: frozenset = field(default_factory=frozenset)
+    # Also test every prefix of the key, for a value the private pattern did
+    # not end at a boundary: `@org-team` still carries `@org`.
+    prefixes: bool = False
 
     def compiled(self) -> re.Pattern:
         return re.compile(self.pattern, self.flags)
@@ -81,26 +86,44 @@ def digest(text: str) -> str:
     return hashlib.sha256(text.lower().encode()).hexdigest()[:16]
 
 
-def key(m: re.Match) -> str:
-    """The part of a candidate a hashed rule judges."""
-    return next((g for g in m.groups() if g is not None), m.group(0))
+def key_group(m: re.Match) -> int:
+    """The group a hashed rule judges: the first after group 1 that matched."""
+    return next((i for i in range(2, len(m.groups()) + 1) if m.group(i) is not None), 1)
 
 
 def matches(rule: Rule, text: str, listed: frozenset | None = None):
-    """Every match of `rule` in `text` that is a leak (for a hashed rule, a listed one)."""
+    """Yield the (start, end) span of every leak of `rule` in `text`.
+
+    A plain rule leaks on every match. A hashed rule leaks only where a key's
+    digest is in `listed` (default: the rule's own list).
+    """
+    if not rule.hashed and listed is None:
+        for m in rule.compiled().finditer(text):
+            yield m.span()
+        return
     listed = rule.hashed if listed is None else listed
+    seen = set()
     for m in rule.compiled().finditer(text):
-        if listed and digest(key(m)) not in listed:
-            continue
-        yield m
+        g = key_group(m)
+        k, at = m.group(g), m.start(g)
+        for n in (range(1, len(k) + 1) if rule.prefixes else (len(k),)):
+            if digest(k[:n]) in listed:
+                span = (m.start(1), at + n) if rule.prefixes else m.span(1)
+                if span not in seen:
+                    seen.add(span)
+                    yield span
+                break
 
 
-def redact(rule: Rule, text: str, repl: str) -> str:
+def redact(rule: Rule, text: str, repl: str, listed: frozenset | None = None) -> str:
     """`text` with every leak of `rule` replaced; scripts/drift_report.py uses it."""
     out, end = [], 0
-    for m in matches(rule, text):
-        out.append(text[end:m.start()] + repl)
-        end = m.end()
+    for start, stop in sorted(matches(rule, text, listed)):
+        if start < end:  # overlaps the previous leak, already replaced
+            end = max(end, stop)
+            continue
+        out.append(text[end:start] + repl)
+        end = stop
     return "".join(out) + text[end:]
 
 
@@ -115,7 +138,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "company-email-domain",
-        r"\b([a-z0-9-]+\.(?:xyz|ai|com))\b",
+        r"(?=([a-z0-9-]+\.(?:xyz|ai|com)))",
         "an internal email domain",
         hashed=frozenset({
             "274f80d2514bf361",
@@ -131,9 +154,10 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "private-github-handle",
-        r"@([\w-]+)",
+        r"(?=(@([\w-]+)))",
         "a private GitHub org, team handle or CODEOWNERS entry",
         exempt=ATTRIBUTION_OK,
+        prefixes=True,
         hashed=frozenset({
             "24667b206f539469",
             "e15b14c0892bce04",
@@ -145,7 +169,7 @@ RULES: tuple[Rule, ...] = (
     # reader cannot open any of these, and they name internal work.
     Rule(
         "private-issue-id",
-        r"\b([a-z]{2,5})-\d+\b",
+        r"(?=(\b([a-z]{2,5})-\d+\b))",
         "a private issue id; cite the case map (C-NN) from examples/case-studies.md instead",
         # Case-insensitive: a branch name carries the id in lower case.
         hashed=frozenset({
@@ -167,7 +191,7 @@ RULES: tuple[Rule, ...] = (
     # --- codebase structure: the service and doc tree of the private repo ---
     Rule(
         "private-service-path",
-        r"\b(?:services|platform)/\w+",
+        r"(?=(\b(?:services|platform)/\w+))",
         "an internal service path",
         hashed=frozenset({
             "0381c4f6d798e329",
@@ -196,7 +220,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "private-docs-path",
-        r"\bdocs/([\w-]+)/",
+        r"(?=(\bdocs/([\w-]+)/))",
         "an internal docs tree that does not exist for adopters",
         hashed=frozenset({
             "4ca303a3bf7ddf7b",
@@ -206,7 +230,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "private-state-doc",
-        r"\b[A-Z]+(?:_[A-Z]+)+\b",
+        r"(?=(\b[A-Z]+(?:_[A-Z]+)+\b))",
         "an internal state or contract artifact",
         flags=0,
         hashed=frozenset({
@@ -224,21 +248,20 @@ RULES: tuple[Rule, ...] = (
     # --- infrastructure ---
     Rule(
         "gcp-project-slug",
-        r"\b([a-z0-9]+)(?=-[\w<])",
+        r"(?=(([a-z0-9]+)-[\w<][\w<>-]*))",
         "a real GCP project, bucket or secret name, or the prefix they share",
         hashed=frozenset({"64bb058d4a89947a"}),
     ),
     Rule(
         "secret-naming-convention",
         # The last two words before `=`, so a prefixed variable still matches.
-        r"([A-Z][A-Z0-9]*_[A-Z0-9]+)\s*=",
+        r"(?=(([a-z][a-z0-9]*_[a-z0-9]+)\s*=))",
         "the private repo's secret-naming convention",
-        flags=0,
         hashed=frozenset({"e88040e7d0052eeb"}),
     ),
     Rule(
         "private-slack-channel",
-        r"#([a-z]+)(?:-[\w-]*\w)?",
+        r"(?=(#([a-z]+)(?:-[\w-]*\w)?))",
         "a private Slack channel name",
         hashed=frozenset({
             "82fe032bd9337b5d",
@@ -258,13 +281,13 @@ RULES: tuple[Rule, ...] = (
     # --- product vocabulary from a workflow that was left out of cadence ---
     Rule(
         "product-vocabulary",
-        r"--([a-z]+)-|\b([a-z]+)\.\w+@\d|\b([a-z]+)-tokens:",
+        r"(?=(--([a-z]+)-|\b([a-z]+)\.\w+@\d|([a-z]+)-tokens:))",
         "product vocabulary from a workflow that was not extracted",
         hashed=frozenset({"b86c24fb6243540a"}),
     ),
     Rule(
         "private-file-name",
-        r"\b[\w-]+\.json\b",
+        r"(?=(\b[\w-]+\.json\b))",
         "a generated file from the private tree",
         hashed=frozenset({"93ff5f8c8aef9b94"}),
     ),
@@ -372,9 +395,9 @@ def scan(path: Path) -> list[tuple[int, str, str, str]]:
 
     hits = []
     for rule in rules_for(rel):
-        for m in matches(rule, text):
+        for start, stop in matches(rule, text):
             # Report the line, not the offset: a reviewer needs to open it.
-            lineno = text.count("\n", 0, m.start()) + 1
+            lineno = text.count("\n", 0, start) + 1
             if rule.name == "company-name":
                 line = text.splitlines()[lineno - 1]
                 if line.count(INSTALL_COORDINATE) >= line.lower().count("arbor"):
@@ -387,7 +410,7 @@ def scan(path: Path) -> list[tuple[int, str, str, str]]:
                 allowed = line.count(CODERABBIT_LINK_OK) + line.count(CODERABBIT_VALUE_OK)
                 if allowed >= line.lower().count("coderabbit"):
                     continue
-            hits.append((lineno, rule.name, m.group(0).strip(), rule.why))
+            hits.append((lineno, rule.name, text[start:stop].strip(), rule.why))
     return sorted(hits)
 
 
@@ -402,31 +425,76 @@ def check_never_tracked() -> list[str]:
     return problems
 
 
-# One string per rule that MUST match it. A rule whose probe stops matching has
-# been broken by an edit; a rule with no probe is unproven and fails the suite.
-# This is the mutation test for the gate itself: `guard-cannot-fire` is the
-# second-most-frequent trap in the ledger this project ships, at n=14.
-PROBES: dict[str, str] = {
-    "company-name": "the Arbor AI workflow",
-    "company-github-org": "see arbor-ai-inc/probe-repo",
-    "private-tracker-url": "https://linear.app/probe-ws/issue/PRB-162",
-    "private-decision-id": "recorded in DECISIONS.md (D087)",
-    "private-venv-incantation": 'run PATH="$(pwd)/src/app/venv/bin:$PATH" pre-commit',
-    "private-model-alias": "model: fable\n",
-    # A hashed rule's probe is a stand-in, never a real name: selftest proves it
-    # does not fire as written, then adds the stand-in's digest and proves it does.
-    "company-email-domain": "you@probe-corp.xyz",
-    "private-github-handle": "@probe-org/infra",
-    "private-issue-id": "carried forward from PRB-147, and branch jdoe/prb-302-x",
-    "private-service-path": "guard services/probe-svc/internal/",
-    "private-docs-path": "see docs/probe-tree/README.md",
-    "private-state-doc": "canonical current-state is PROBE_STATE.md",
-    "gcp-project-slug": "gcloud config set project probecorp-dev",
-    "secret-naming-convention": "PROBE_SECRET=probecorp-jwt-secret:latest",
-    "private-slack-channel": "post to #probe-standup",
-    "product-vocabulary": "the probe.button@2 component and --probe-color tokens",
-    "private-file-name": "regenerate probe-registry.json",
-    "review-provider-hardcoded": "run @coderabbitai full review",
+# Every rule, and every alternative inside it, has a probe that MUST fire. A rule
+# whose probe stops matching has been broken by an edit; a rule with no probe is
+# unproven and fails the suite. This is the mutation test for the gate itself:
+# `guard-cannot-fire` is the second-most-frequent trap in the ledger this
+# project ships, at n=14.
+PROBES: dict[str, tuple[str, ...]] = {
+    "company-name": ("the Arbor AI workflow",),
+    "company-github-org": ("see arbor-ai-inc/probe-repo",),
+    "private-tracker-url": ("https://linear.app/probe-ws/issue/PRB-162",),
+    "private-decision-id": ("recorded in DECISIONS.md (D087)",),
+    "private-venv-incantation": ('run PATH="$(pwd)/src/app/venv/bin:$PATH" pre-commit',),
+    "private-model-alias": ("model: fable\n", "use fable[1m] here", "or opus[1m]"),
+    "review-provider-hardcoded": ("run @coderabbitai full review",),
+}
+
+# A hashed rule's probe is (text, stand-in). The stand-in is never a real name:
+# selftest proves the text does not fire as written, then lists the stand-in's
+# digest and proves it does.
+HASHED_PROBES: dict[str, tuple[tuple[str, str], ...]] = {
+    "company-email-domain": (
+        ("you@probe-corp.xyz", "probe-corp.xyz"),
+        ("you_probe-corp.xyz", "probe-corp.xyz"),
+        ("see x-probe-corp.com", "probe-corp.com"),
+        ("at probe-corp.company", "probe-corp.com"),
+    ),
+    "private-github-handle": (
+        ("@probe-org/infra", "probe-org"),
+        ("@probe-org-team", "probe-org"),
+        ("@probe-org_bot", "probe-org"),
+    ),
+    "private-issue-id": (
+        ("carried forward from PRB-147", "prb"),
+        ("branch jdoe/prb-302-x", "prb"),
+    ),
+    "private-service-path": (("guard services/probe-svc/internal/", "services/probe"),),
+    "private-docs-path": (
+        ("see docs/probe-tree/README.md", "probe-tree"),
+        ("see docs/docs/probe-tree/x", "probe-tree"),
+    ),
+    "private-state-doc": (("canonical current-state is PROBE_STATE.md", "PROBE_STATE"),),
+    "gcp-project-slug": (
+        ("gcloud config set project probecorp-dev", "probecorp"),
+        ("bucket my_probecorp-tf-state", "probecorp"),
+        ("secrets live in probecorp-<env>", "probecorp"),
+    ),
+    "secret-naming-convention": (
+        ("PROBE_SECRET=probecorp-jwt-secret:latest", "probe_secret"),
+        ("probe_secret = os.environ[...]", "probe_secret"),
+        ("LEGACY_PROBE_SECRET=false", "probe_secret"),
+        ("XPROBE_SECRET=1", "probe_secret"),
+    ),
+    "private-slack-channel": (
+        ("post to #probe-standup", "probe"),
+        ("page #probe", "probe"),
+    ),
+    "product-vocabulary": (
+        ("the probe.button@2 component", "probe"),
+        ("--probe-color tokens", "probe"),
+        ("load myprobe-tokens: from the theme", "probe"),
+    ),
+    "private-file-name": (("regenerate probe-registry.json", "probe-registry.json"),),
+}
+
+# Near misses that must NOT fire with the stand-in listed: a shape that grew too
+# loose would flood every adopter's repo with false leaks.
+HASHED_NEAR_MISSES: dict[str, tuple[tuple[str, str], ...]] = {
+    "private-issue-id": (("PRBX-147", "prb"), ("XPRB-147", "prb")),
+    "private-slack-channel": (("#probestandup", "probe"),),
+    "private-docs-path": (("docs/probe-tree.md", "probe-tree"),),
+    "private-github-handle": (("@xprobe-org", "probe-org"),),
 }
 
 
@@ -435,25 +503,42 @@ def selftest() -> int:
     failures = []
     all_rules = (*RULES, CODERABBIT)
 
-    missing = {r.name for r in all_rules} - set(PROBES)
-    for name in sorted(missing):
-        failures.append(f"rule {name!r} has no probe, so nothing proves it can fire")
-
     for rule in all_rules:
-        probe = PROBES.get(rule.name)
-        if probe is None:
+        probes = HASHED_PROBES.get(rule.name) if rule.hashed else PROBES.get(rule.name)
+        if not probes:
+            failures.append(f"rule {rule.name!r} has no probe, so nothing proves it can fire")
             continue
-        m = rule.compiled().search(probe)
-        if not m:
-            failures.append(f"rule {rule.name!r} did not match its own probe {probe!r}")
-        elif rule.hashed:
-            # Fires on a listed digest, and only on a listed one.
-            if digest(key(m)) in rule.hashed:
-                failures.append(f"rule {rule.name!r}: the probe's digest must not be a real entry")
-            if any(matches(rule, probe)):
-                failures.append(f"rule {rule.name!r} fired on a name it does not list")
-            if not any(matches(rule, probe, rule.hashed | {digest(key(m))})):
-                failures.append(f"rule {rule.name!r} did not fire on a listed digest")
+        if not rule.hashed:
+            for probe in probes:
+                if not any(matches(rule, probe)):
+                    failures.append(f"rule {rule.name!r} did not match its probe {probe!r}")
+            continue
+        # Fires on a listed digest, and only on a listed one.
+        for probe, standin in probes:
+            listed = rule.hashed | {digest(standin)}
+            if digest(standin) in rule.hashed:
+                failures.append(f"rule {rule.name!r}: stand-in {standin!r} must not be a real entry")
+            elif any(matches(rule, probe)):
+                failures.append(f"rule {rule.name!r} fired on {probe!r}, a name it does not list")
+            elif not any(matches(rule, probe, listed)):
+                failures.append(f"rule {rule.name!r} did not fire on {probe!r} with {standin!r} listed")
+        for probe, standin in HASHED_NEAR_MISSES.get(rule.name, ()):
+            if any(matches(rule, probe, rule.hashed | {digest(standin)})):
+                failures.append(f"rule {rule.name!r} fired on near miss {probe!r}")
+
+    stray = (set(PROBES) | set(HASHED_PROBES)) - {r.name for r in all_rules}
+    for name in sorted(stray):
+        failures.append(f"probe {name!r} names no rule")
+
+    # redact() replaces exactly the leaks, so drift_report compares like with like.
+    slack = next(r for r in RULES if r.name == "private-slack-channel")
+    got = redact(slack, "post to #probe-standup and #other", "<x>", slack.hashed | {digest("probe")})
+    if got != "post to <x> and #other":
+        failures.append(f"redact() on a hashed rule gave {got!r}")
+    decision = next(r for r in RULES if r.name == "private-decision-id")
+    got = redact(decision, "see D087 and D012", "<x>")
+    if got != "see <x> and <x>":
+        failures.append(f"redact() on a plain rule gave {got!r}")
 
     # The company name must be caught in a workflow doc and allowed in README.
     company = next(r for r in RULES if r.name == "company-name")
