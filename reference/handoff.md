@@ -79,8 +79,11 @@ Repo: <owner/name>  ·  Checkout: <absolute path>  ·  Branch(es): <names or non
 Owner: <person>  ·  Started: <date>  ·  Last written: <date>  ·  Status: active | parked (<why>) | closing
 
 ## Resume here — <date>
-Goal: <one line> · State: <3–8 bullets with ids> · Next: <one startable action>
-Waiting on: <who, what, since when> · In flight: <anything that breaks if forgotten>
+Goal: <one line: what done looks like>
+State: <3–8 bullets: what is true now, with PR / branch / issue ids>
+Next: <the single next action, startable without asking>
+Waiting on: <who, what, since when>  (omit if nothing)
+In flight: <anything that breaks if forgotten>
 
 ## Rules
 - <track-specific rule or trap> — why: <one line> (<date>)

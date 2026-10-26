@@ -23,9 +23,9 @@ your decision, made in your normal review process.
 
 ```bash
 # from anywhere inside the repository you want to mine
+echo ".skill-candidates/" >> .gitignore        # first: candidates quote your own prompts
 python3 /path/to/skill_miner.py --dry-run      # summary only, writes nothing
 python3 /path/to/skill_miner.py                # writes candidates to .skill-candidates/
-echo ".skill-candidates/" >> .gitignore        # keep them out of version control
 ```
 
 Try it on invented data first, without touching your real sessions:

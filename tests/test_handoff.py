@@ -352,6 +352,74 @@ class HandoffTest(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertIn("cache TTL", found[0]["message"])
 
+    def test_nested_repo_in_an_ignored_folder_is_checked_too(self):
+        (self.repo / ".gitignore").write_text(".local/\nvendor/\n")
+        other = self.repo / "vendor" / "other"
+        other.mkdir(parents=True)
+        git("init", "-q", cwd=other)
+        (self.repo / "cadence.toml").write_text('[handoff]\ndir = "vendor/other/.local"\n')
+        rc, _, err = self.run_cli("new", "theme-nested")
+        self.assertEqual(rc, 2)
+        self.assertIn(str(other.resolve()), err)
+        (other / ".gitignore").write_text(".local/\n")
+        self.assertEqual(self.run_cli("new", "theme-nested")[0], 0)
+
+    def test_file_system_and_date_errors_are_usage_errors(self):
+        a_file = self.tmp / "a-file"
+        a_file.write_text("x")
+        (self.repo / "cadence.toml").write_text(f'[handoff]\ndir = "{a_file}"\n')
+        self.assertEqual(self.run_cli("new", "theme-x")[0], 2)
+        (self.repo / "cadence.toml").unlink()
+        (self.dir / "HANDOFF-theme-dir.md").mkdir(parents=True)
+        self.assertEqual(self.run_cli("list")[0], 2)
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = handoff.main(["--repo", str(self.repo), "--today", "not-a-date", "list"])
+        self.assertEqual(rc, 2)
+
+    def test_separate_git_dir_linked_worktree_is_refused_cleanly(self):
+        work, store = self.tmp / "sep-work", self.tmp / "sep-store"
+        git("init", "-q", "-b", "main", "--separate-git-dir", str(store), str(work), cwd=self.tmp)
+        self.commit(work)
+        wt = self.tmp / "sep-wt"
+        git("worktree", "add", "-q", "-b", "side", str(wt), cwd=work)
+        rc, _, err = self.cli_at(wt, "list")
+        self.assertEqual(rc, 2)
+        self.assertIn("cannot find the main worktree", err)
+
+    def test_bare_repo_named_dot_git_with_a_worktree_is_refused(self):
+        proj = self.tmp / "proj"
+        proj.mkdir()
+        git("clone", "-q", "--bare", str(self.repo), str(proj / ".git"), cwd=self.tmp)
+        wt = self.tmp / "proj-wt"
+        git("-C", str(proj / ".git"), "worktree", "add", "-q", str(wt), cwd=self.tmp)
+        rc, _, err = self.cli_at(wt, "list")
+        self.assertEqual(rc, 2)
+        self.assertIn("bare repository", err)
+
+    def test_settings_file_that_is_a_cadence_toml_without_handoff(self):
+        cfg = self.tmp / "other.toml"
+        cfg.write_text('[tracker]\nprovider = "github"\n')
+        self.assertEqual(self.run_cli("--config", str(cfg), "list")[0], 0)
+
+    def test_timestamped_backups_in_common_spellings_warn(self):
+        p = self.write("PROJ-12-widget-cache", GOOD.format(checkout=self.repo))
+        for suffix in (".bak-20990101", ".bak.2099-01-01", ".2099-01-02", ".bak_1767225600", ".prev"):
+            p.with_name(p.name + suffix).write_text("x")
+        _, out, _ = self.run_cli("lint", "--json")
+        found = [f for f in json.loads(out)["PROJ-12-widget-cache"] if f["code"] == "timestamped-backups"]
+        self.assertEqual(len(found), 1)
+        self.assertIn("4 timestamped", found[0]["message"])
+
+    def test_dir_with_a_tilde_is_expanded(self):
+        home = self.tmp / "home"
+        home.mkdir()
+        (self.repo / "cadence.toml").write_text('[handoff]\ndir = "~/handoffs"\n')
+        with mock.patch.dict("os.environ", {"HOME": str(home)}):
+            rc, out, err = self.run_cli("new", "theme-home")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(Path(out.strip()).parent, (home / "handoffs").resolve())
+
     # --- isolation ----------------------------------------------------------------------
     def test_no_network_and_only_git(self):
         self.write("PROJ-12-widget-cache", GOOD.format(checkout=self.repo))

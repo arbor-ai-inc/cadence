@@ -232,7 +232,7 @@ either way. Turn it on once you trust the boundary and want unattended runs not 
 
 ```toml
 [handoff]
-dir = ".local"          # relative to the main worktree, or absolute; must be gitignored
+dir = ".local"          # relative to the main worktree, absolute, or ~/…; must be gitignored
 file_max_lines = 300
 ```
 

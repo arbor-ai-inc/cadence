@@ -169,6 +169,24 @@ class Config:
         return "\n".join(lines)
 
 
+_HANDOFF = None
+
+
+def _handoff_tool():
+    """tools/handoff.py, loaded by path: never another module named `handoff`,
+    and without touching sys.path."""
+    global _HANDOFF
+    if _HANDOFF is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "_cadence_handoff", Path(__file__).resolve().parent / "handoff.py")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module  # dataclasses look the module up by name
+        spec.loader.exec_module(module)
+        _HANDOFF = module
+    return _HANDOFF
+
+
 def repo_root(start: Path | None = None) -> Path:
     """The MAIN worktree root, even when called from inside a linked worktree.
 
@@ -365,10 +383,7 @@ def load(start: Path | None = None, *, root: Path | None = None) -> Config:
             raise ConfigError(f"{path}: [fanout].{name} must be at least 1")
     # tools/handoff.py reads [handoff] itself, with the same checks, so a typo
     # fails here too, where every other config mistake does.
-    if str(Path(__file__).resolve().parent) not in sys.path:
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import handoff  # noqa: E402 - a sibling in tools/
-    for problem in handoff.config_errors(raw.get("handoff", {})):
+    for problem in _handoff_tool().config_errors(raw.get("handoff", {})):
         raise ConfigError(f"{path}: {problem}")
     return cfg
 

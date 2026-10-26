@@ -48,7 +48,8 @@ PREFIX = "HANDOFF-"
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$|^[A-Z][A-Z0-9]*-[0-9]+(-[a-z0-9-]+)?$")
 HEADER_FIELDS = ("Issue", "Repo", "Checkout", "Owner", "Last written", "Status")
 STATUSES = ("active", "parked", "closing")
-TIMESTAMPED_BACKUP_RE = re.compile(r"\.bak[-_.]?\d{6,}")
+# `.bak-20991231`, `.bak.2099-12-31`, `.2099-12-31`, `.bak_1767225600`: a copy per write.
+TIMESTAMPED_BACKUP_RE = re.compile(r"\.(?:bak[-_.]?)?(?:\d{6,}|\d{4}-\d{2}-\d{2})")
 
 EXIT_OK, EXIT_LINT, EXIT_USAGE, EXIT_AMBIGUOUS, EXIT_NOT_FOUND = 0, 1, 2, 3, 4
 
@@ -110,6 +111,9 @@ def main_root(cwd: Path) -> Path:
     if _git_path(cwd, "--absolute-git-dir") == common:
         return repo_root(cwd)
     if common.name == ".git":
+        bare = _git(common, "config", "--file", str(common / "config"), "--bool", "core.bare")
+        if bare.stdout.strip() == "true":
+            raise UsageError(f"{common} is a bare repository; run from a worktree")
         return common.parent
     proc = _git(common, "config", "--file", str(common / "config"), "core.worktree")
     if proc.returncode == 0 and proc.stdout.strip():
@@ -193,7 +197,9 @@ def load_config(path: str | None, root: Path) -> Config:
         raw = tomllib.loads(source.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise UsageError(f"cannot read config {source}: {exc}") from exc
-    if "handoff" in raw or not path:
+    # A file with tables is a cadence.toml: read its [handoff], if any. Only a
+    # --config file of bare keys is the keys themselves.
+    if not path or any(isinstance(v, dict) for v in raw.values()):
         raw = raw.get("handoff", {})
     errors = config_errors(raw)
     if errors:
@@ -202,7 +208,7 @@ def load_config(path: str | None, root: Path) -> Config:
 
 
 def handoff_dir(root: Path, cfg: Config) -> Path:
-    d = Path(cfg.dir)
+    d = Path(os.path.expanduser(cfg.dir))
     return (d if d.is_absolute() else root / d).resolve()
 
 
@@ -452,9 +458,13 @@ def cmd_new(args: argparse.Namespace, root: Path, cfg: Config, today: date) -> i
         raise UsageError(f"{path} already exists; update it instead")
     if d == root:
         raise UsageError(f"[handoff].dir {cfg.dir!r} is the repository root; use a folder inside it, such as .local")
-    holder = root if root in d.parents else enclosing_repo(d)
-    if holder and not is_ignored(holder, path):
-        raise UsageError(f"{path} would be tracked by git; add `{os.path.relpath(d, holder)}/` to .gitignore first")
+    # The repository that directly holds the folder (a nested repo or a submodule
+    # inside this one, say), and this one when it holds the folder too.
+    holders = [h for h in (enclosing_repo(d), root if root in d.parents else None) if h]
+    for holder in dict.fromkeys(holders):
+        if not is_ignored(holder, path):
+            raise UsageError(f"{path} would be tracked by git (the repository at {holder}); "
+                             f"add `{os.path.relpath(d, holder)}/` to its .gitignore first")
     d.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -572,6 +582,9 @@ def main(argv: list[str] | None = None) -> int:
     except LookupError as exc:
         print(f"handoff: {exc}", file=sys.stderr)
         return EXIT_AMBIGUOUS if "matches" in str(exc) and "no handoff" not in str(exc) else EXIT_NOT_FOUND
+    except (OSError, ValueError) as exc:
+        print(f"handoff: {exc}", file=sys.stderr)
+        return EXIT_USAGE
 
 
 if __name__ == "__main__":
