@@ -248,7 +248,8 @@ def load(start: Path | None = None, *, root: Path | None = None) -> Config:
     except (tomllib.TOMLDecodeError, OSError) as exc:
         raise ConfigError(f"{path}: cannot be read: {exc}") from exc
 
-    known = {"commands", "tracker", "ask", "review", "paths", "models", "retro", "fanout", "must_stop", "git"}
+    known = {"commands", "tracker", "ask", "review", "paths", "models", "retro", "fanout", "must_stop", "git",
+             "handoff"}
     for section in raw:
         if section not in known:
             raise ConfigError(
@@ -362,6 +363,20 @@ def load(start: Path | None = None, *, root: Path | None = None) -> Config:
     for name, value in (("max_leaves", cfg.max_leaves), ("max_depth", cfg.max_depth), ("max_options", cfg.max_options)):
         if value < 1:
             raise ConfigError(f"{path}: [fanout].{name} must be at least 1")
+    # tools/handoff.py reads [handoff] itself; checked here too so a typo fails
+    # where every other config mistake does.
+    handoff = raw.get("handoff", {})
+    handoff_keys = {"dir", "resume_max_lines", "file_max_lines", "archive_max_lines",
+                    "log_entry_max_lines", "stale_days"}
+    if not isinstance(handoff, dict):
+        raise ConfigError(f"{path}: [handoff] must be a table")
+    for key, value in handoff.items():
+        if key not in handoff_keys:
+            raise ConfigError(f"{path}: unknown key [handoff].{key}. Known: {', '.join(sorted(handoff_keys))}")
+        if key == "dir" and not (isinstance(value, str) and value):
+            raise ConfigError(f"{path}: [handoff].dir must be a non-empty path")
+        if key != "dir" and not (isinstance(value, int) and not isinstance(value, bool) and value >= 1):
+            raise ConfigError(f"{path}: [handoff].{key} must be a whole number of at least 1")
     return cfg
 
 
@@ -493,6 +508,9 @@ def selftest() -> int:
             ('[paths]\ntemplates = 5\n', "a non-string templates path"),
             ('[review]\ncircuit_breaker = 0\n', "a zero circuit breaker"),
             ('[review]\nspec_circuit_breaker = 0\n', "a zero spec circuit breaker"),
+            ('[handoff]\ntypo = 1\n', "an unknown [handoff] key"),
+            ('[handoff]\nfile_max_lines = 0\n', "a zero handoff cap"),
+            ('[handoff]\ndir = ""\n', "an empty handoff dir"),
         ):
             (root / CONFIG_NAME).write_text(bad)
             try:

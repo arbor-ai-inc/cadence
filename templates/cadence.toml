@@ -147,6 +147,19 @@ review_standards = "docs/code-review-standards.md"
 synthesis_threshold = 15
 
 
+[handoff]
+# Notes that let a later session pick up a multi-session track. All optional.
+# The directory is relative to the main worktree and must be gitignored.
+# dir = ".local"
+# Caps, in non-blank lines.
+# resume_max_lines = 40
+# file_max_lines = 300
+# archive_max_lines = 300
+# log_entry_max_lines = 5
+# Warn when an active handoff hasn't been written for this many days.
+# stale_days = 14
+
+
 [fanout]
 # Off by default. With it off, a one-way decision is ASKED (a decision brief) and
 # fanout.py refuses to build a tree. Turn it on to have an autonomous run build

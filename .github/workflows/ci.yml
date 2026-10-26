@@ -89,6 +89,16 @@ jobs:
       - name: fan-out engine
         run: python3 tests/check_fanout.py
 
+      - name: handoff tool
+        run: python3 tests/test_handoff.py
+
+      # contrib/ is not part of the plugin, but it is published from here, so it
+      # is tested here.
+      - name: contrib/skill-miner
+        run: |
+          python3 -m unittest discover -s contrib/skill-miner/tests
+          python3 contrib/skill-miner/examples/demo.py
+
       - name: adapters stay thin and links resolve
         run: python3 tests/check_agent_skills.py
 

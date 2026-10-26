@@ -1,5 +1,5 @@
 {
-  "README.md": 5500,
+  "README.md": 5600,
   "automated-review.md": 21500,
   "branch-updates.md": 18500,
   "code-review-and-quality.md": 17000,
@@ -9,6 +9,7 @@
   "execute-issue.md": 11500,
   "explain-plain.md": 9500,
   "git-pr-workflow.md": 19000,
+  "handoff.md": 13500,
   "human-brief.md": 12000,
   "personas/README.md": 2500,
   "personas/code-reviewer.md": 2000,

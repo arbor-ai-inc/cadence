@@ -3,6 +3,19 @@
 What changed for adopters, newest first. Every version that reaches `main` is
 tagged `v<version>`.
 
+## 0.12.0
+
+- **New workflow: handoff.** Save, resume, harvest, prune and close the notes an agent
+  keeps for work that spans sessions (`reference/handoff.md`). `tools/handoff.py`
+  creates, resolves, lists, lints and backs them up; handoffs live in the main
+  worktree, so every linked worktree finds the same one. Settings are a new, optional
+  `[handoff]` table in `cadence.toml`. Regenerate your wrappers to pick it up; a
+  project skill already named `handoff` must be removed first (its rules can move to
+  an overlay).
+- **`contrib/skill-miner`:** a standalone tool that finds reusable-skill candidates in
+  local Claude Code and Codex session logs, and recurring rules across handoffs. It is
+  not part of the plugin; run it from a clone.
+
 ## 0.11.0
 
 Review and explanation lessons from the source project, rewritten in the short style.
