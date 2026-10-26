@@ -72,13 +72,16 @@ STRUCTURAL = [
     (re.compile(r"\bplane\b"), "boundary"),
 ]
 
-# Every leak pattern collapses to one token, so a private name and the generic
-# phrase that replaced it compare equal.
-NORMALIZE = [(r.compiled(), "<x>") for r in (*_leaks.RULES, _leaks.CODERABBIT)] + STRUCTURAL
+# Every leak collapses to one token, so a private name and the generic phrase
+# that replaced it compare equal. redact() replaces only what the gate would
+# fail on: a hashed rule's shape alone matches far more than private names.
+LEAK_RULES = (*_leaks.RULES, _leaks.CODERABBIT)
 
 
 def normalize(text: str) -> list[str]:
-    for pattern, repl in NORMALIZE:
+    for rule in LEAK_RULES:
+        text = _leaks.redact(rule, text, "<x>")
+    for pattern, repl in STRUCTURAL:
         text = pattern.sub(repl, text)
     # Compare on words, not lines: a rewrap changes every line and no content.
     return [w for w in re.split(r"\s+", text) if w]

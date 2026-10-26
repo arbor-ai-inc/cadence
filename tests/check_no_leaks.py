@@ -11,6 +11,12 @@ Every pattern below was measured against the source tree before extraction.
 The counts in the comments are what was there at fork time, so a regression is
 recognisable rather than merely nonzero.
 
+The private names themselves are not in this file, so publishing the gate does
+not publish the list it guards. A rule is a generic shape (any `XX-123` id, any
+`#channel`, any email domain) plus the digests of the private values that shape
+must not carry. Only shapes that name nothing private, and the company name,
+which the licence already attributes, are plain patterns.
+
 Usage:
     check_no_leaks.py               # scan the whole repo; what CI and pre-commit run
     check_no_leaks.py --list        # print every rule and where it is exempt
@@ -35,7 +41,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 # Attribution is deliberate and narrow: cadence is published BY the company, so
 # its name belongs in the licence, the plugin author block and the README, and
-# nowhere else. See the plan's "Settled" section. Any other pattern below gets
+# nowhere else. Any other pattern below gets
 # no exemption at all -- issue ids, internal paths, infra slugs and private
 # model aliases are leaks wherever they appear.
 ATTRIBUTION_OK = frozenset({
@@ -57,7 +63,9 @@ class Rule:
     exempt: frozenset = field(default_factory=frozenset)
     flags: int = re.IGNORECASE
     # When set, `pattern` only finds candidates, and a candidate is a leak only
-    # if its digest is listed. The private names stay out of this public file.
+    # if the digest of its key is listed. The key is the first group that
+    # matched, or the whole match when the pattern has no groups. The private
+    # names stay out of this public file.
     hashed: frozenset = field(default_factory=frozenset)
 
     def compiled(self) -> re.Pattern:
@@ -73,8 +81,32 @@ def digest(text: str) -> str:
     return hashlib.sha256(text.lower().encode()).hexdigest()[:16]
 
 
+def key(m: re.Match) -> str:
+    """The part of a candidate a hashed rule judges."""
+    return next((g for g in m.groups() if g is not None), m.group(0))
+
+
+def matches(rule: Rule, text: str, listed: frozenset | None = None):
+    """Every match of `rule` in `text` that is a leak (for a hashed rule, a listed one)."""
+    listed = rule.hashed if listed is None else listed
+    for m in rule.compiled().finditer(text):
+        if listed and digest(key(m)) not in listed:
+            continue
+        yield m
+
+
+def redact(rule: Rule, text: str, repl: str) -> str:
+    """`text` with every leak of `rule` replaced; scripts/drift_report.py uses it."""
+    out, end = [], 0
+    for m in matches(rule, text):
+        out.append(text[end:m.start()] + repl)
+        end = m.end()
+    return "".join(out) + text[end:]
+
+
 RULES: tuple[Rule, ...] = (
     # --- company identity: 82 hits at fork time, attributed exception only ---
+    # The company name is public (LICENSE, NOTICE), so it is the one plain name.
     Rule(
         "company-name",
         r"arbor",
@@ -83,24 +115,43 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "company-email-domain",
-        r"[\w.+-]*@?arborai\.(?:xyz|ai|com)",
+        r"\b([a-z0-9-]+\.(?:xyz|ai|com))\b",
         "an internal email domain",
+        hashed=frozenset({
+            "274f80d2514bf361",
+            "3fb5436d65ee61e1",
+            "9a0283fb8a8a03d7",
+        }),
     ),
     Rule(
         "company-github-org",
-        r"@arbor-ai-inc|@murty-arbor|arbor-ai-inc/(?!cadence)",
-        "a private GitHub org, team handle or CODEOWNERS entry",
+        r"arbor-ai-inc/(?!cadence\b)",
+        "a private repository in the company's GitHub org",
         exempt=ATTRIBUTION_OK,
     ),
-    # --- issue tracker: 124 ALT- + 30 ENG- hits across 49 + 6 distinct issues ---
+    Rule(
+        "private-github-handle",
+        r"@([\w-]+)",
+        "a private GitHub org, team handle or CODEOWNERS entry",
+        exempt=ATTRIBUTION_OK,
+        hashed=frozenset({
+            "24667b206f539469",
+            "e15b14c0892bce04",
+        }),
+    ),
+    # --- issue tracker: 154 hits across 55 distinct issues, two prefixes ---
     # These are the evidence anchors. reference/ must cite the case map
     # (C-01..C-NN in examples/case-studies.md) instead. No exemptions: a public
     # reader cannot open any of these, and they name internal work.
     Rule(
         "private-issue-id",
-        r"\b(?:ALT|ENG)-\d+\b",
+        r"\b([a-z]{2,5})-\d+\b",
         "a private issue id; cite the case map (C-NN) from examples/case-studies.md instead",
         # Case-insensitive: a branch name carries the id in lower case.
+        hashed=frozenset({
+            "4d48fba6cf5f7d6a",
+            "82fe032bd9337b5d",
+        }),
     ),
     Rule(
         "private-tracker-url",
@@ -145,8 +196,13 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "private-docs-path",
-        r"\bdocs/(?:contracts|architecture|context)/",
+        r"\bdocs/([\w-]+)/",
         "an internal docs tree that does not exist for adopters",
+        hashed=frozenset({
+            "4ca303a3bf7ddf7b",
+            "b094db7ce2f99cbc",
+            "ea7792a26f405e2a",
+        }),
     ),
     Rule(
         "private-state-doc",
@@ -168,18 +224,27 @@ RULES: tuple[Rule, ...] = (
     # --- infrastructure ---
     Rule(
         "gcp-project-slug",
-        r"arborai-(?:dev|staging|prod|ml-dev|ml-prod|shared|tf-state[\w-]*|jwt[\w-]*)",
-        "a real GCP project, bucket or secret name",
+        r"\b([a-z0-9]+)(?=-[\w<])",
+        "a real GCP project, bucket or secret name, or the prefix they share",
+        hashed=frozenset({"64bb058d4a89947a"}),
     ),
     Rule(
         "secret-naming-convention",
-        r"JWT_SECRET\s*=|arborai-<env>",
+        # The last two words before `=`, so a prefixed variable still matches.
+        r"([A-Z][A-Z0-9]*_[A-Z0-9]+)\s*=",
         "the private repo's secret-naming convention",
+        flags=0,
+        hashed=frozenset({"e88040e7d0052eeb"}),
     ),
     Rule(
         "private-slack-channel",
-        r"#(?:eng-standup|alerts|deploys|eng-[\w-]+)\b",
+        r"#([a-z]+)(?:-[\w-]*\w)?",
         "a private Slack channel name",
+        hashed=frozenset({
+            "82fe032bd9337b5d",
+            "deb3e366c077c228",
+            "efb5202cc8685e24",
+        }),
     ),
     # --- model aliases: `model: fable` in 6 files, an internal alias that will
     # not resolve for an external user, and easy to miss because it is
@@ -193,8 +258,9 @@ RULES: tuple[Rule, ...] = (
     # --- product vocabulary from a workflow that was left out of cadence ---
     Rule(
         "product-vocabulary",
-        r"\barbor\.\w+@\d|--arbor-|arbor-tokens:",
+        r"--([a-z]+)-|\b([a-z]+)\.\w+@\d|\b([a-z]+)-tokens:",
         "product vocabulary from a workflow that was not extracted",
+        hashed=frozenset({"b86c24fb6243540a"}),
     ),
     Rule(
         "private-file-name",
@@ -247,7 +313,7 @@ SKIP_DIRS = frozenset({".git", ".venv", "node_modules", "__pycache__"})
 # Multi-component prefixes, matched on the full relative path with a separator.
 SKIP_PREFIXES = ("evals/results/",)
 SKIP_SUFFIXES = frozenset({".pyc", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".zip", ".ico"})
-# The case map is the private C-NN -> ALT-NN mapping. It must never be tracked;
+# The case map is the private C-NN -> issue id mapping. It must never be tracked;
 # a separate check below fails if it is, which is stronger than exempting it.
 NEVER_TRACKED = ("casemap.json",)
 
@@ -306,9 +372,7 @@ def scan(path: Path) -> list[tuple[int, str, str, str]]:
 
     hits = []
     for rule in rules_for(rel):
-        for m in rule.compiled().finditer(text):
-            if rule.hashed and digest(m.group(0)) not in rule.hashed:
-                continue
+        for m in matches(rule, text):
             # Report the line, not the offset: a reviewer needs to open it.
             lineno = text.count("\n", 0, m.start()) + 1
             if rule.name == "company-name":
@@ -344,21 +408,23 @@ def check_never_tracked() -> list[str]:
 # second-most-frequent trap in the ledger this project ships, at n=14.
 PROBES: dict[str, str] = {
     "company-name": "the Arbor AI workflow",
-    "company-email-domain": "you@arborai.xyz",
-    "company-github-org": "@arbor-ai-inc/infra",
-    "private-issue-id": "carried forward from ENG-147, and branch jdoe/alt-302-x",
-    "private-tracker-url": "https://linear.app/arbor-ai/issue/ALT-162",
+    "company-github-org": "see arbor-ai-inc/probe-repo",
+    "private-tracker-url": "https://linear.app/probe-ws/issue/PRB-162",
     "private-decision-id": "recorded in DECISIONS.md (D087)",
-    # A hashed rule's probe is a stand-in; selftest adds the stand-in's digest.
-    "private-service-path": "guard services/probe-svc/internal/",
-    "private-docs-path": "see docs/contracts/README.md",
-    "private-state-doc": "canonical current-state is PROBE_STATE.md",
-    "private-venv-incantation": 'run PATH="$(pwd)/platform/api/venv/bin:$PATH" pre-commit',
-    "gcp-project-slug": "gcloud config set project arborai-dev",
-    "secret-naming-convention": "JWT_SECRET=arborai-jwt-secret:latest",
-    "private-slack-channel": "post to #eng-standup",
+    "private-venv-incantation": 'run PATH="$(pwd)/src/app/venv/bin:$PATH" pre-commit',
     "private-model-alias": "model: fable\n",
-    "product-vocabulary": "the arbor.button@2 component and --arbor-color tokens",
+    # A hashed rule's probe is a stand-in, never a real name: selftest proves it
+    # does not fire as written, then adds the stand-in's digest and proves it does.
+    "company-email-domain": "you@probe-corp.xyz",
+    "private-github-handle": "@probe-org/infra",
+    "private-issue-id": "carried forward from PRB-147, and branch jdoe/prb-302-x",
+    "private-service-path": "guard services/probe-svc/internal/",
+    "private-docs-path": "see docs/probe-tree/README.md",
+    "private-state-doc": "canonical current-state is PROBE_STATE.md",
+    "gcp-project-slug": "gcloud config set project probecorp-dev",
+    "secret-naming-convention": "PROBE_SECRET=probecorp-jwt-secret:latest",
+    "private-slack-channel": "post to #probe-standup",
+    "product-vocabulary": "the probe.button@2 component and --probe-color tokens",
     "private-file-name": "regenerate probe-registry.json",
     "review-provider-hardcoded": "run @coderabbitai full review",
 }
@@ -382,10 +448,11 @@ def selftest() -> int:
             failures.append(f"rule {rule.name!r} did not match its own probe {probe!r}")
         elif rule.hashed:
             # Fires on a listed digest, and only on a listed one.
-            if digest(m.group(0)) in rule.hashed:
+            if digest(key(m)) in rule.hashed:
                 failures.append(f"rule {rule.name!r}: the probe's digest must not be a real entry")
-            listed = rule.hashed | {digest(m.group(0))}
-            if not any(digest(x.group(0)) in listed for x in rule.compiled().finditer(probe)):
+            if any(matches(rule, probe)):
+                failures.append(f"rule {rule.name!r} fired on a name it does not list")
+            if not any(matches(rule, probe, rule.hashed | {digest(key(m))})):
                 failures.append(f"rule {rule.name!r} did not fire on a listed digest")
 
     # The company name must be caught in a workflow doc and allowed in README.
