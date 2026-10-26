@@ -13,8 +13,9 @@ recognisable rather than merely nonzero.
 
 The private names are not written out in this file. A rule is a generic shape
 (any `XX-123` id, any `#channel`, any email domain) plus the digests of the
-private values that shape must not carry. Only shapes that name nothing private,
-and the company name, which the licence already attributes, are plain patterns.
+private values that shape must not carry. Plain patterns name nothing private:
+generic shapes, the company name, which the licence already attributes, and
+public model names.
 That obscures the names; it does not keep them secret. Most are short common
 words, so anyone who guesses one can confirm it against its digest.
 
@@ -95,9 +96,9 @@ def matches(rule: Rule, text: str, listed: frozenset | None = None):
     """Yield the (start, end) span of every leak of `rule` in `text`.
 
     A plain rule leaks on every match. A hashed rule leaks only where a key's
-    digest is in `listed` (default: the rule's own list).
+    digest is in `listed` (default: the rule's own list); ignored for a plain rule.
     """
-    if not rule.hashed and listed is None:
+    if not rule.hashed:  # `listed` applies to hashed rules only
         for m in rule.compiled().finditer(text):
             yield m.span()
         return
@@ -138,7 +139,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "company-email-domain",
-        r"(?=([a-z0-9-]+\.(?:xyz|ai|com)))",
+        r"(?=([a-z0-9-]{1,63}\.(?:xyz|ai|com)))",
         "an internal email domain",
         hashed=frozenset({
             "274f80d2514bf361",
@@ -248,14 +249,14 @@ RULES: tuple[Rule, ...] = (
     # --- infrastructure ---
     Rule(
         "gcp-project-slug",
-        r"(?=(([a-z0-9]+)-[\w<][\w<>-]*))",
+        r"(?=(([a-z0-9]{1,40})-[\w<][\w<>-]{0,40}))",
         "a real GCP project, bucket or secret name, or the prefix they share",
         hashed=frozenset({"64bb058d4a89947a"}),
     ),
     Rule(
         "secret-naming-convention",
         # The last two words before `=`, so a prefixed variable still matches.
-        r"(?=(([a-z][a-z0-9]*_[a-z0-9]+)\s*=))",
+        r"(?=(([a-z][a-z0-9]{0,39}_[a-z0-9]{1,40})\s*=))",
         "the private repo's secret-naming convention",
         hashed=frozenset({"e88040e7d0052eeb"}),
     ),
@@ -269,19 +270,19 @@ RULES: tuple[Rule, ...] = (
             "efb5202cc8685e24",
         }),
     ),
-    # --- model aliases: `model: fable` in 6 files, an internal alias that will
-    # not resolve for an external user, and easy to miss because it is
-    # frontmatter rather than prose.
+    # --- model aliases: `model: fable` in 6 files at fork time. The model names
+    # are public; the leak is a workflow pinned to one alias, which may not
+    # resolve for an adopter and is easy to miss in frontmatter.
     Rule(
-        "private-model-alias",
+        "pinned-model-alias",
         r"^\s*model:\s*fable|\bfable\[1m\]|\bopus\[1m\]",
-        "a non-public model alias; use the [models] config instead",
+        "a workflow pinned to one model alias; use the [models] config instead",
         flags=re.IGNORECASE | re.MULTILINE,
     ),
     # --- product vocabulary from a workflow that was left out of cadence ---
     Rule(
         "product-vocabulary",
-        r"(?=(--([a-z]+)-|\b([a-z]+)\.\w+@\d|([a-z]+)-tokens:))",
+        r"(?=(--([a-z]{1,40})-|\b([a-z]{1,40})\.\w{1,40}@\d|([a-z]{1,40})-tokens:))",
         "product vocabulary from a workflow that was not extracted",
         hashed=frozenset({"b86c24fb6243540a"}),
     ),
@@ -436,7 +437,7 @@ PROBES: dict[str, tuple[str, ...]] = {
     "private-tracker-url": ("https://linear.app/probe-ws/issue/PRB-162",),
     "private-decision-id": ("recorded in DECISIONS.md (D087)",),
     "private-venv-incantation": ('run PATH="$(pwd)/src/app/venv/bin:$PATH" pre-commit',),
-    "private-model-alias": ("model: fable\n", "use fable[1m] here", "or opus[1m]"),
+    "pinned-model-alias": ("model: fable\n", "use fable[1m] here", "or opus[1m]"),
     "review-provider-hardcoded": ("run @coderabbitai full review",),
 }
 
@@ -449,6 +450,7 @@ HASHED_PROBES: dict[str, tuple[tuple[str, str], ...]] = {
         ("you_probe-corp.xyz", "probe-corp.xyz"),
         ("see x-probe-corp.com", "probe-corp.com"),
         ("at probe-corp.company", "probe-corp.com"),
+        ("you@probe-corp.ai", "probe-corp.ai"),
     ),
     "private-github-handle": (
         ("@probe-org/infra", "probe-org"),
@@ -469,6 +471,7 @@ HASHED_PROBES: dict[str, tuple[tuple[str, str], ...]] = {
         ("gcloud config set project probecorp-dev", "probecorp"),
         ("bucket my_probecorp-tf-state", "probecorp"),
         ("secrets live in probecorp-<env>", "probecorp"),
+        ("bucket terraform-probecorp-tf-state", "probecorp"),
     ),
     "secret-naming-convention": (
         ("PROBE_SECRET=probecorp-jwt-secret:latest", "probe_secret"),
@@ -535,6 +538,12 @@ def selftest() -> int:
     got = redact(slack, "post to #probe-standup and #other", "<x>", slack.hashed | {digest("probe")})
     if got != "post to <x> and #other":
         failures.append(f"redact() on a hashed rule gave {got!r}")
+    # Overlapping leaks collapse into one replacement that covers both.
+    email = next(r for r in RULES if r.name == "company-email-domain")
+    both = email.hashed | {digest("probe.com"), digest("com.xyz")}
+    got = redact(email, "see probe.com.xyz end", "<x>", both)
+    if got != "see <x> end":
+        failures.append(f"redact() on overlapping leaks gave {got!r}")
     decision = next(r for r in RULES if r.name == "private-decision-id")
     got = redact(decision, "see D087 and D012", "<x>")
     if got != "see <x> and <x>":
