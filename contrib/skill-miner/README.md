@@ -139,7 +139,8 @@ under `checkouts`.
 It also reads **handoff files**: the notes an agent leaves so a later session can pick
 up a track, in the format of cadence's [`handoff`](../../reference/handoff.md) workflow. By
 default these are `.local/HANDOFF-*.md`, set with `handoff_globs`, in every checkout in
-scope.
+scope. If your project sets `[handoff].dir` in `cadence.toml`, set `handoff_globs` to
+match; skill-miner doesn't read `cadence.toml`.
 
 - **What is read:** bullets under rule-like headings ("Rules", "Gotchas", "Do not",
   "How to work") and decision-like ones ("Decided", "Rejected", "Don't re-open"), plus

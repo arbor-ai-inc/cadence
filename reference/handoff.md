@@ -56,7 +56,9 @@ Not for:
 - **Location:** `<dir>/HANDOFF-<slug>.md` in the **main** worktree, `<dir>` defaulting
   to `.local/`. `handoff.py` always reads and writes there, from whichever worktree it
   runs, so a handoff saved in one worktree is found from every other. The header's
-  `Checkout:` names the worktree the work happens in.
+  `Checkout:` names the worktree the work happens in. One exception: from a linked
+  worktree of a checkout whose git directory lives elsewhere, it stops and says to run
+  from the main worktree.
 - **Never tracked:** `handoff.py new` refuses a path git would track. Add `<dir>/` to
   `.gitignore` first. `<dir>` may also sit outside the repository; it is then checked
   against whichever repository holds it, if any.

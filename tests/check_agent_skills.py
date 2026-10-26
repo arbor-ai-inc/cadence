@@ -90,7 +90,8 @@ def check_plugin_root_paths(errors: list[str]) -> None:
                 )
 
 
-CONTRIB_REF = re.compile(r"(?<![\w/])contrib/")
+# Bare, `../contrib/`, `${CLAUDE_PLUGIN_ROOT}/contrib/`, `.cadence/contrib/`: any path into it.
+CONTRIB_REF = re.compile(r"(?<![\w-])contrib/")
 
 
 def check_no_contrib_dependency(errors: list[str]) -> None:
@@ -105,8 +106,19 @@ def check_no_contrib_dependency(errors: list[str]) -> None:
         + sorted(ROOT.glob("skills/*/SKILL.md"))
         + sorted(CODEX_SKILLS_DIR.rglob("*.md"))
         + sorted(CLAUDE_AGENTS_DIR.glob("*.md"))
+        + sorted((ROOT / "tools").glob("*.py"))
+        + sorted((ROOT / "templates").glob("*"))
+        + [ROOT / "cadence"]
     )
+    # The pattern itself, against every form a path into contrib/ takes.
+    for form in ("contrib/x", "`../contrib/x`", "${CLAUDE_PLUGIN_ROOT}/contrib/x", ".cadence/contrib/x"):
+        if not CONTRIB_REF.search(form):
+            errors.append(f"check_no_contrib_dependency: pattern misses {form!r}")
+    if CONTRIB_REF.search("my-contrib/x"):
+        errors.append("check_no_contrib_dependency: pattern fires on 'my-contrib/x'")
     for path in searched:
+        if not path.is_file():
+            continue
         for lineno, line in enumerate(read(path).splitlines(), 1):
             if CONTRIB_REF.search(line):
                 errors.append(

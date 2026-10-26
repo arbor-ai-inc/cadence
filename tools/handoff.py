@@ -14,7 +14,9 @@ same every time:
 
 Handoffs live in the MAIN worktree's handoff directory, whichever worktree this
 runs from, so a handoff saved in one worktree is found from every other. The
-header's `Checkout:` still names the worktree the work happens in.
+header's `Checkout:` still names the worktree the work happens in. (From a
+linked worktree of a checkout whose git directory lives elsewhere, the main
+worktree can't be found; the tool says so and stops.)
 
 Settings come from the [handoff] table of cadence.toml at the main worktree's
 root, or from a standalone TOML file passed with --config. Every key is
@@ -199,7 +201,11 @@ def load_config(path: str | None, root: Path) -> Config:
         raise UsageError(f"cannot read config {source}: {exc}") from exc
     # A file with tables is a cadence.toml: read its [handoff], if any. Only a
     # --config file of bare keys is the keys themselves.
-    if not path or any(isinstance(v, dict) for v in raw.values()):
+    tables = any(isinstance(v, dict) for v in raw.values())
+    if path and tables and any(not isinstance(v, dict) for v in raw.values()):
+        raise UsageError(f"{source}: put the handoff keys in a [handoff] table, or use only "
+                         f"top-level keys; not both")
+    if not path or tables:
         raw = raw.get("handoff", {})
     errors = config_errors(raw)
     if errors:
@@ -461,10 +467,13 @@ def cmd_new(args: argparse.Namespace, root: Path, cfg: Config, today: date) -> i
     # The repository that directly holds the folder (a nested repo or a submodule
     # inside this one, say), and this one when it holds the folder too.
     holders = [h for h in (enclosing_repo(d), root if root in d.parents else None) if h]
+    # The backup and the archive sit beside it and must stay untracked too.
+    companions = (path, path.with_name(path.name + ".prev"), path.with_name(path.name[:-3] + ".archive.md"))
     for holder in dict.fromkeys(holders):
-        if not is_ignored(holder, path):
-            raise UsageError(f"{path} would be tracked by git (the repository at {holder}); "
-                             f"add `{os.path.relpath(d, holder)}/` to its .gitignore first")
+        for f in companions:
+            if not is_ignored(holder, f):
+                raise UsageError(f"{f} would be tracked by git (the repository at {holder}); "
+                                 f"add `{os.path.relpath(d, holder)}/` to its .gitignore first")
     d.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:

@@ -420,6 +420,21 @@ class HandoffTest(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         self.assertEqual(Path(out.strip()).parent, (home / "handoffs").resolve())
 
+    def test_backup_and_archive_must_be_ignored_too(self):
+        (self.repo / ".gitignore").write_text(".local/HANDOFF-*.md\n")
+        rc, _, err = self.run_cli("new", "theme-narrow")
+        self.assertEqual(rc, 2)
+        self.assertIn(".prev", err)
+        (self.repo / ".gitignore").write_text(".local/HANDOFF-*.md\n.local/HANDOFF-*.md.prev\n")
+        self.assertEqual(self.run_cli("new", "theme-narrow")[0], 0)
+
+    def test_settings_file_mixing_top_level_keys_and_tables_is_refused(self):
+        cfg = self.tmp / "mixed.toml"
+        cfg.write_text('dir = "/x"\n\n[other]\nk = 1\n')
+        rc, _, err = self.run_cli("--config", str(cfg), "list")
+        self.assertEqual(rc, 2)
+        self.assertIn("not both", err)
+
     # --- isolation ----------------------------------------------------------------------
     def test_no_network_and_only_git(self):
         self.write("PROJ-12-widget-cache", GOOD.format(checkout=self.repo))
