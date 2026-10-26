@@ -90,7 +90,9 @@ def check_plugin_root_paths(errors: list[str]) -> None:
                 )
 
 
-# Bare, `../contrib/`, `${CLAUDE_PLUGIN_ROOT}/contrib/`, `.cadence/contrib/`: any path into it.
+# The text `contrib/` in any written-out path: bare, `../contrib/`,
+# `${CLAUDE_PLUGIN_ROOT}/contrib/`, `.cadence/contrib/`. A path built in pieces in
+# code (`ROOT / "contrib"`) is not seen; review catches that.
 CONTRIB_REF = re.compile(r"(?<![\w-])contrib/")
 
 

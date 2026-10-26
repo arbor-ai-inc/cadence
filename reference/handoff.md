@@ -183,8 +183,9 @@ checkout whose git directory lives elsewhere) that is `git rev-parse --show-topl
 From a linked worktree of an ordinary clone it is the parent of
 `git rev-parse --git-common-dir`; of a submodule, the submodule's own checkout.
 
-- **new:** stop if the file exists; `mkdir -p "$M/<dir>"`; stop unless
-  `git -C "$M" check-ignore -q <dir>/HANDOFF-<slug>.md`; fill the template's header from
+- **new:** stop if the file exists; `mkdir -p "$M/<dir>"`; stop unless both
+  `git -C "$M" check-ignore -q <dir>/HANDOFF-<slug>.md` and the same for
+  `<dir>/HANDOFF-<slug>.md.prev` succeed (ignore all of `<dir>/`); fill the template's header from
   `git remote get-url origin`, `git rev-parse --show-toplevel` and
   `git branch --show-current`.
 - **resolve / list:** the rules in § *The file*, over `$M/<dir>/HANDOFF-*.md`, leaving
