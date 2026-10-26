@@ -60,7 +60,7 @@ architecture docs — is optional, and `docs/setup.md` says what each one buys.
 
 ## What is in it
 
-Four things that work together and are separately useful.
+Five things that work together and are separately useful.
 
 ### A recurrence-gated retro loop
 
@@ -106,6 +106,14 @@ request** before any engineering design exists. The design is then graded agains
 a rubric you supply. Each artifact is hash-frozen at its first `READY` verdict, so
 a spec cannot drift out from under the review that approved it.
 
+### Handoffs for multi-session work
+
+When a track spans sessions, the agent keeps a **handoff**: a gitignored note with
+the goal, where things stand and the one next action, rewritten each time rather
+than appended. Facts and rules that outlive the track are moved into the repo by
+PR instead of piling up in the note. `tools/handoff.py` creates, finds and lints
+them. See [`reference/handoff.md`](reference/handoff.md).
+
 ## Layout
 
 ```
@@ -113,18 +121,33 @@ reference/     the canonical workflows — the substance
 skills/        thin Claude Code adapters that route to them
 agents/        subagent definitions (reviewers, editor)
 adapters/codex/  the same adapters for Codex, generated
-tools/         fanout, spec hashing, ask transport, review state, wrappers
+tools/         fanout, spec hashing, ask transport, review state, wrappers, handoffs
 cadence        the tool dispatcher; ./.cadence/cadence in your project
 templates/     cadence.toml, spec templates, the retro ledger, a principles
                rubric, a review-policy template, a tools inventory stub
 examples/      the measurements the rules cite
 evals/         graded cases pinning four rules an agent has reason to break
 tests/         the gates
+contrib/       standalone tools no workflow uses; run from a clone: skill-miner
 ```
 
 The two-layer split is load-bearing rather than tidy: a 900-line workflow doc
 cannot sit in every session's context, and a rule that exists in two places has
 already started to drift.
+
+### What goes in `tools/` and what goes in `contrib/`
+
+A tool belongs in `tools/` when a workflow uses it: a doc in `reference/` tells the
+agent to run it. Those tools are installed with the plugin, follow its version, and
+are held to every gate here.
+
+A tool belongs in `contrib/` when it is useful on its own but no workflow calls it.
+It ships in the repository; run it from a clone. A contrib tool has its own README
+and tests, and no workflow may depend on it: `tests/check_agent_skills.py` fails if
+anything in `reference/`, `skills/` or `adapters/` points into `contrib/`.
+
+When a workflow starts using a contrib tool, move it to `tools/` in the same change
+that adds the workflow step. A contrib tool nobody runs any more can be deleted.
 
 ## Verifying it
 
@@ -143,6 +166,7 @@ python3 scripts/gen_adapters.py --check
 python3 tests/check_agent_skills.py
 python3 tests/check_doc_budget.py         # every reference doc within its byte budget
 python3 tests/check_fanout.py             # 74 tests over real git worktrees
+python3 tests/test_handoff.py             # handoff.py, over real git repos and worktrees
 python3 tests/check_install.py            # an adopter's first hour, end to end
 python3 tests/check_user_docs.py          # no doc command an adopter cannot run
 python3 tests/check_version_bumped.py     # a shipped change bumps the version

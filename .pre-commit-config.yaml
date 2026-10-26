@@ -68,6 +68,22 @@ repos:
         pass_filenames: false
         files: ^(tools/(fanout|cadence_config)\.py|tests/check_fanout\.py)$
 
+      - id: handoff
+        name: handoff
+        description: The handoff tool resolves, lints and creates files agents resume from.
+        entry: python3 tests/test_handoff.py
+        language: system
+        pass_filenames: false
+        files: ^(tools/handoff\.py|tests/test_handoff\.py)$
+
+      - id: skill-miner
+        name: skill-miner
+        description: contrib/skill-miner's own tests, run when it changes.
+        entry: python3 -m unittest discover -s contrib/skill-miner/tests
+        language: system
+        pass_filenames: false
+        files: ^contrib/skill-miner/
+
       - id: gen-adapters
         name: gen-adapters
         description: >

@@ -1,0 +1,56 @@
+# skill-miner configuration. Every key is optional; CLI flags override these.
+# Relative paths resolve against the repository root.
+#
+#   python3 skill_miner.py --config path/to/skill-miner.toml
+
+# Where inactive candidates are written. Keep it gitignored.
+out = ".skill-candidates"
+
+# Only look at sessions newer than this: "30d", "12h", "2w" or "all".
+since = "30d"
+
+# A pattern must occur at least min_count times across at least min_sessions sessions.
+min_count = 3
+min_sessions = 2
+
+# Jaccard similarity (0-1] for grouping two prompts together. Lower finds more, noisier.
+similarity = 0.5
+
+# Extra directories of existing skills or workflow docs to dedupe against, on top of
+# the defaults (.claude/skills, .codex/skills, .agents/skills). Each may hold
+# <name>/SKILL.md folders or flat *.md files with `name:` / `description:` frontmatter.
+skills_dirs = ["docs/workflows"]
+
+# Extra phrases that mark a prompt as correcting the agent (added to the built-ins).
+# A single word must open the prompt; a phrase may appear in its first six words.
+correction_markers = ["rather than", "that broke"]
+
+# Extra slash commands / skills to ignore (added to the built-in agent commands).
+ignore_commands = ["standup"]
+
+# Extra regexes to redact from evidence quotes (added to the built-in secret patterns).
+extra_redact_patterns = ["TICKET-[0-9]+", "internal\\.example\\.com"]
+
+# Also mine other checkouts of the same repository (same origin owner/name), such as
+# a second clone. Worktrees are always included.
+same_remote = false
+
+# Handoff files to mine, per checkout (replaces the default).
+handoff_globs = [".local/HANDOFF-*.md"]
+# A handoff pattern must appear in at least this many distinct tracks.
+min_handoffs = 2
+# Flag a `→ to promote:` line older than this many days.
+pending_days = 14
+# Extra heading keywords (added to the built-ins) for what counts as a rule or a decision,
+# and for fact sections that are never mined.
+handoff_rule_headings = ["house style"]
+handoff_decision_headings = ["agreed"]
+handoff_fact_headings = ["inventory"]
+
+# Evidence formatting.
+quote_chars = 160
+max_evidence = 5
+
+# Agent data directories, if not the defaults.
+# claude_home = "~/.claude"
+# codex_home = "~/.codex"

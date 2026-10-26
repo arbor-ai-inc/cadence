@@ -69,6 +69,7 @@ model explicitly** — an agent merely told to follow one inherits the caller's 
 | Need to pick up a tracked issue and implement it | [`execute-issue`](./execute-issue.md) |
 | A ticket taught something worth keeping | [`retro`](./retro.md) — capture is a step in git-pr-workflow, not a separate PR |
 | The retros `pending/` directory has reached `[retro].synthesis_threshold` | [`retro-synthesis`](./retro-synthesis.md) |
+| Work spans sessions: save, resume or close its notes | [`handoff`](./handoff.md) |
 | Blocked mid-implementation on the author's decision | [`decision-fanout`](./decision-fanout.md) |
 | Need a specialist review perspective | [`personas/`](./personas/) plus the relevant workflow skill |
 | Need project facts | your own architecture, current-state and runbook docs, plus nearby code and tests |

@@ -90,6 +90,45 @@ def check_plugin_root_paths(errors: list[str]) -> None:
                 )
 
 
+# The text `contrib/` in any written-out path: bare, `../contrib/`,
+# `${CLAUDE_PLUGIN_ROOT}/contrib/`, `.cadence/contrib/`. A path built in pieces in
+# code (`ROOT / "contrib"`) is not seen; review catches that.
+CONTRIB_REF = re.compile(r"(?<![\w-])contrib/")
+
+
+def check_no_contrib_dependency(errors: list[str]) -> None:
+    """No workflow may depend on contrib/ (README § What goes in tools/ ...).
+
+    contrib/ tools follow no plugin version and are held to fewer gates, so a
+    workflow that quietly starts calling one inherits none of that discipline.
+    Promote the tool to tools/ in the same change instead.
+    """
+    searched = (
+        sorted(CANONICAL_DIR.rglob("*.md"))
+        + sorted(ROOT.glob("skills/*/SKILL.md"))
+        + sorted(CODEX_SKILLS_DIR.rglob("*.md"))
+        + sorted(CLAUDE_AGENTS_DIR.glob("*.md"))
+        + sorted((ROOT / "tools").glob("*.py"))
+        + sorted((ROOT / "templates").glob("*"))
+        + [ROOT / "cadence"]
+    )
+    # The pattern itself, against every form a path into contrib/ takes.
+    for form in ("contrib/x", "`../contrib/x`", "${CLAUDE_PLUGIN_ROOT}/contrib/x", ".cadence/contrib/x"):
+        if not CONTRIB_REF.search(form):
+            errors.append(f"check_no_contrib_dependency: pattern misses {form!r}")
+    if CONTRIB_REF.search("my-contrib/x"):
+        errors.append("check_no_contrib_dependency: pattern fires on 'my-contrib/x'")
+    for path in searched:
+        if not path.is_file():
+            continue
+        for lineno, line in enumerate(read(path).splitlines(), 1):
+            if CONTRIB_REF.search(line):
+                errors.append(
+                    f"{rel(path)}:{lineno} points into contrib/. A workflow that uses a "
+                    f"contrib tool must move it to tools/ in the same change."
+                )
+
+
 def check_plugin_manifest(errors: list[str]) -> None:
     """plugin.json's `agents` array must list exactly the files on disk.
 
@@ -473,6 +512,7 @@ def main() -> int:
         return 1
 
     check_plugin_root_paths(errors)
+    check_no_contrib_dependency(errors)
     check_plugin_manifest(errors)
     check_pending_list_is_current(errors)
     check_canonical_links(errors)

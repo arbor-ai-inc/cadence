@@ -169,6 +169,24 @@ class Config:
         return "\n".join(lines)
 
 
+_HANDOFF = None
+
+
+def _handoff_tool():
+    """tools/handoff.py, loaded by path: never another module named `handoff`,
+    and without touching sys.path."""
+    global _HANDOFF
+    if _HANDOFF is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "_cadence_handoff", Path(__file__).resolve().parent / "handoff.py")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module  # dataclasses look the module up by name
+        spec.loader.exec_module(module)
+        _HANDOFF = module
+    return _HANDOFF
+
+
 def repo_root(start: Path | None = None) -> Path:
     """The MAIN worktree root, even when called from inside a linked worktree.
 
@@ -248,7 +266,8 @@ def load(start: Path | None = None, *, root: Path | None = None) -> Config:
     except (tomllib.TOMLDecodeError, OSError) as exc:
         raise ConfigError(f"{path}: cannot be read: {exc}") from exc
 
-    known = {"commands", "tracker", "ask", "review", "paths", "models", "retro", "fanout", "must_stop", "git"}
+    known = {"commands", "tracker", "ask", "review", "paths", "models", "retro", "fanout", "must_stop", "git",
+             "handoff"}
     for section in raw:
         if section not in known:
             raise ConfigError(
@@ -362,6 +381,10 @@ def load(start: Path | None = None, *, root: Path | None = None) -> Config:
     for name, value in (("max_leaves", cfg.max_leaves), ("max_depth", cfg.max_depth), ("max_options", cfg.max_options)):
         if value < 1:
             raise ConfigError(f"{path}: [fanout].{name} must be at least 1")
+    # tools/handoff.py reads [handoff] itself, with the same checks, so a typo
+    # fails here too, where every other config mistake does.
+    for problem in _handoff_tool().config_errors(raw.get("handoff", {})):
+        raise ConfigError(f"{path}: {problem}")
     return cfg
 
 
@@ -493,6 +516,9 @@ def selftest() -> int:
             ('[paths]\ntemplates = 5\n', "a non-string templates path"),
             ('[review]\ncircuit_breaker = 0\n', "a zero circuit breaker"),
             ('[review]\nspec_circuit_breaker = 0\n', "a zero spec circuit breaker"),
+            ('[handoff]\ntypo = 1\n', "an unknown [handoff] key"),
+            ('[handoff]\nfile_max_lines = 0\n', "a zero handoff cap"),
+            ('[handoff]\ndir = ""\n', "an empty handoff dir"),
         ):
             (root / CONFIG_NAME).write_text(bad)
             try:
