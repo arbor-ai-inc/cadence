@@ -135,6 +135,20 @@ The two-layer split is load-bearing rather than tidy: a 900-line workflow doc
 cannot sit in every session's context, and a rule that exists in two places has
 already started to drift.
 
+### What goes in `tools/` and what goes in `contrib/`
+
+A tool belongs in `tools/` when a workflow uses it: a doc in `reference/` tells the
+agent to run it. Those tools are installed with the plugin, follow its version, and
+are held to every gate here.
+
+A tool belongs in `contrib/` when it is useful on its own but no workflow calls it.
+It ships in the repository; run it from a clone. A contrib tool has its own README
+and tests, and no workflow may depend on it: `tests/check_agent_skills.py` fails if
+anything in `reference/`, `skills/` or `adapters/` points into `contrib/`.
+
+When a workflow starts using a contrib tool, move it to `tools/` in the same change
+that adds the workflow step. A contrib tool nobody runs any more can be deleted.
+
 ## Verifying it
 
 **For contributors, run from a clone of this repo** — these are cadence's own

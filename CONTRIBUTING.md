@@ -6,7 +6,8 @@ Pull requests are welcome from anyone. You need no access to the repository.
    every change lands through a reviewed pull request.
 2. **Make the change.** Read README § *Contributing* first. It lists the three
    rules that catch most first attempts. For a new or changed workflow, also read
-   [`reference/skill-anatomy.md`](reference/skill-anatomy.md).
+   [`reference/skill-anatomy.md`](reference/skill-anatomy.md). For a new tool, README
+   § *What goes in `tools/` and what goes in `contrib/`* says where it belongs.
 3. **Run the gates.** Run every command in README § *Verifying it* except
    `check_vocab.py`, which needs repositories you do not have; a maintainer runs it.
 4. **Open the pull request.** Say what changes for someone who already uses cadence.
