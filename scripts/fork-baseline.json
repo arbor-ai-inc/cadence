@@ -4,8 +4,8 @@
     "code-review.md": "3ff1c03f293f655e",
     "decision-fanout.md": "0ed1fb37c15ca3b3",
     "draft-plan.md": "7ed0afa4ee34670c",
-    "execute-issue.md": "d8dee38ffc94ff12",
-    "git-pr-workflow.md": "bebd6304e0a281b7",
+    "execute-issue.md": "86d2372f2e60a19b",
+    "git-pr-workflow.md": "7f2b3820ed867360",
     "human-brief.md": "474e0048e86c4221",
     "retro-synthesis.md": "5dfe3dd7e526fb06",
     "retro.md": "46c9d8f5a30131bb",
@@ -16,5 +16,5 @@
     "test-driven-development.md": "b424e18705ae5f81",
     "using-agent-skills.md": "2bcdacef3780552b"
   },
-  "upstream_head": "0a64212"
+  "upstream_head": "0a642124"
 }
