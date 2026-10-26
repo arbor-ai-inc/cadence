@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run skill-miner end to end on invented data, without touching your real sessions.
 
-    python3 tools/skill-miner/examples/demo.py          # prints the summary and one candidate
-    python3 tools/skill-miner/examples/demo.py --keep   # leaves the temp dir for inspection
+    python3 contrib/skill-miner/examples/demo.py          # prints the summary and one candidate
+    python3 contrib/skill-miner/examples/demo.py --keep   # leaves the temp dir for inspection
 
 Builds a throwaway git repo plus fake ~/.claude and ~/.codex directories in a temp
 dir, writes a few synthetic sessions into them, and points the miner at them with

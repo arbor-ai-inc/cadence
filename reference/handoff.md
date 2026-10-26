@@ -58,7 +58,8 @@ Not for:
   runs, so a handoff saved in one worktree is found from every other. The header's
   `Checkout:` names the worktree the work happens in.
 - **Never tracked:** `handoff.py new` refuses a path git would track. Add `<dir>/` to
-  `.gitignore` first.
+  `.gitignore` first. `<dir>` may also sit outside the repository; it is then checked
+  against whichever repository holds it, if any.
 - **One copy:** another clone reads the file by path; it never copies it. A copy
   written back resurrects what the original deleted.
 - **Slug:** the name the team already uses: an issue id plus topic
@@ -172,7 +173,10 @@ Waiting on: <who, what, since when> · In flight: <anything that breaks if forgo
 ### Without the tool
 
 If `handoff.py` can't run (no Python 3.11+), do each step by hand from the main
-worktree, `M=$(git worktree list --porcelain | head -1 | cut -d' ' -f2-)`:
+worktree, `$M`. From the main worktree itself (an ordinary clone, a submodule, or a
+checkout whose git directory lives elsewhere) that is `git rev-parse --show-toplevel`.
+From a linked worktree of an ordinary clone it is the parent of
+`git rev-parse --git-common-dir`; of a submodule, the submodule's own checkout.
 
 - **new:** stop if the file exists; `mkdir -p "$M/<dir>"`; stop unless
   `git -C "$M" check-ignore -q <dir>/HANDOFF-<slug>.md`; fill the template's header from
@@ -207,7 +211,9 @@ Say in the report that the checks were done by hand.
 - The same handoff in several clones, or timestamped backups piling up.
 - Acting on a state line without checking it.
 
-`handoff.py lint` catches most of these mechanically.
+`handoff.py lint` catches the stacked resume sections, a missing `Next:`, unsourced
+facts and reasonless decisions, stale `→ to promote:` lines and backups piling up. The
+rest need judgment.
 
 ## Verification
 

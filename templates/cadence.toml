@@ -149,7 +149,7 @@ synthesis_threshold = 15
 
 [handoff]
 # Notes that let a later session pick up a multi-session track. All optional.
-# The directory is relative to the main worktree and must be gitignored.
+# The directory is relative to the main worktree (or absolute) and must be gitignored.
 # dir = ".local"
 # Caps, in non-blank lines.
 # resume_max_lines = 40

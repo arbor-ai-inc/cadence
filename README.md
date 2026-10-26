@@ -128,7 +128,7 @@ templates/     cadence.toml, spec templates, the retro ledger, a principles
 examples/      the measurements the rules cite
 evals/         graded cases pinning four rules an agent has reason to break
 tests/         the gates
-contrib/       standalone tools, not part of the plugin: skill-miner
+contrib/       standalone tools no workflow uses; run from a clone: skill-miner
 ```
 
 The two-layer split is load-bearing rather than tidy: a 900-line workflow doc

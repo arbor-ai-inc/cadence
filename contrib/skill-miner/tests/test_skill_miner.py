@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Tests for skill_miner.py. Stdlib unittest; every fixture is synthetic.
 
-    python3 -m unittest discover -s tools/skill-miner/tests -v
-    python3 tools/skill-miner/tests/test_skill_miner.py
+    python3 -m unittest discover -s contrib/skill-miner/tests -v
+    python3 contrib/skill-miner/tests/test_skill_miner.py
 
 Each test builds a throwaway git repo plus fake Claude Code / Codex data dirs in a
 tempdir, writes invented session logs into them, and runs the real CLI entry point.

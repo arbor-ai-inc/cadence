@@ -13,8 +13,8 @@ tagged `v<version>`.
   project skill already named `handoff` must be removed first (its rules can move to
   an overlay).
 - **`contrib/skill-miner`:** a standalone tool that finds reusable-skill candidates in
-  local Claude Code and Codex session logs, and recurring rules across handoffs. It is
-  not part of the plugin; run it from a clone.
+  local Claude Code and Codex session logs, and recurring rules across handoffs. It
+  ships in the repository but no workflow uses it; run it from a clone.
 
 ## 0.11.0
 

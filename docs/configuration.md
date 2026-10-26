@@ -232,14 +232,15 @@ either way. Turn it on once you trust the boundary and want unattended runs not 
 
 ```toml
 [handoff]
-dir = ".local"          # relative to the main worktree; must be gitignored
+dir = ".local"          # relative to the main worktree, or absolute; must be gitignored
 file_max_lines = 300
 ```
 
 Every key is optional; the defaults are in `templates/cadence.toml`. Handoffs live in
 the **main** worktree's directory, so one saved from a linked worktree is found from
 every other. Add the directory to `.gitignore` first: `handoff.py new` refuses a path
-git would track.
+git would track. `handoff.py --config FILE` reads the same keys from another TOML file,
+either in a `[handoff]` table or at its top level.
 
 ## Models
 

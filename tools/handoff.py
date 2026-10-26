@@ -87,12 +87,36 @@ def repo_root(cwd: Path) -> Path:
     return Path(proc.stdout.strip()).resolve()
 
 
-def main_root(cwd: Path) -> Path:
-    """The MAIN worktree's root, even from a linked worktree: where handoffs live."""
-    proc = _git(cwd, "rev-parse", "--path-format=absolute", "--git-common-dir")
-    if proc.returncode != 0:
+def _git_path(cwd: Path, *argv: str) -> Path:
+    """A path git prints, resolved against `cwd` (older git prints it relative)."""
+    proc = _git(cwd, "rev-parse", *argv)
+    out = proc.stdout.strip()
+    if proc.returncode != 0 or not out or "\n" in out:
         raise UsageError(f"{cwd} is not inside a git repository")
-    return Path(proc.stdout.strip()).resolve().parent
+    return (cwd / out).resolve()
+
+
+def main_root(cwd: Path) -> Path:
+    """The MAIN worktree's root, even from a linked worktree: where handoffs live.
+
+    From the main worktree (including a submodule's, or one whose git directory
+    lives elsewhere) that is simply its top level. From a linked worktree it is
+    found through the shared git directory: its parent for an ordinary `.git`,
+    else the directory its `core.worktree` names (how a submodule records it).
+    """
+    if _git(cwd, "rev-parse", "--is-bare-repository").stdout.strip() == "true":
+        raise UsageError(f"{cwd} is a bare repository; run from a worktree")
+    common = _git_path(cwd, "--git-common-dir")
+    if _git_path(cwd, "--absolute-git-dir") == common:
+        return repo_root(cwd)
+    if common.name == ".git":
+        return common.parent
+    proc = _git(common, "config", "--file", str(common / "config"), "core.worktree")
+    if proc.returncode == 0 and proc.stdout.strip():
+        return (common / proc.stdout.strip()).resolve()
+    raise UsageError(
+        f"cannot find the main worktree from the linked worktree {cwd}; run from the main worktree"
+    )
 
 
 def normalize_remote(url: str) -> str | None:
@@ -120,6 +144,15 @@ def git_user(root: Path) -> str:
     return proc.stdout.strip() or "unknown"
 
 
+def enclosing_repo(d: Path) -> Path | None:
+    """The worktree holding `d` (or its nearest existing parent), if any."""
+    probe = next((p for p in (d, *d.parents) if p.is_dir()), None)
+    if probe is None:
+        return None
+    proc = _git(probe, "rev-parse", "--show-toplevel")
+    return Path(proc.stdout.strip()).resolve() if proc.returncode == 0 else None
+
+
 def is_ignored(root: Path, path: Path) -> bool:
     return _git(root, "check-ignore", "-q", "--no-index", os.path.relpath(path, root)).returncode == 0
 
@@ -131,8 +164,28 @@ def is_ignored(root: Path, path: Path) -> bool:
 CONFIG_NAME = "cadence.toml"
 
 
+def config_errors(raw: object) -> list[str]:
+    """What is wrong with a [handoff] table. cadence_config.py uses this too."""
+    if not isinstance(raw, dict):
+        return ["[handoff] must be a table"]
+    known = [f.name for f in dataclasses.fields(Config)]
+    errors = []
+    for key, value in raw.items():
+        if key not in known:
+            errors.append(f"unknown key [handoff].{key}. Known: {', '.join(sorted(known))}")
+        elif key == "dir":
+            if not (isinstance(value, str) and value.strip()):
+                errors.append("[handoff].dir must be a non-empty path")
+        elif not (isinstance(value, int) and not isinstance(value, bool) and value >= 1):
+            errors.append(f"[handoff].{key} must be a whole number of at least 1")
+    return errors
+
+
 def load_config(path: str | None, root: Path) -> Config:
-    """--config FILE (top-level keys), else the [handoff] table of root/cadence.toml."""
+    """The [handoff] table of --config FILE or of root/cadence.toml.
+
+    A --config file may also hold the keys at its top level, with no table.
+    """
     source = Path(path) if path else root / CONFIG_NAME
     if not path and not source.exists():
         return Config()
@@ -140,12 +193,11 @@ def load_config(path: str | None, root: Path) -> Config:
         raw = tomllib.loads(source.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise UsageError(f"cannot read config {source}: {exc}") from exc
-    if not path:
+    if "handoff" in raw or not path:
         raw = raw.get("handoff", {})
-    fields = {f.name: f.type for f in dataclasses.fields(Config)}
-    unknown = sorted(set(raw) - set(fields))
-    if unknown:
-        raise UsageError(f"unknown config keys: {', '.join(unknown)}")
+    errors = config_errors(raw)
+    if errors:
+        raise UsageError(f"{source}: " + "; ".join(errors))
     return Config(**raw)
 
 
@@ -339,6 +391,12 @@ def lint_file(path: Path, cfg: Config, today: date) -> list[Finding]:
         elif ln.strip():
             count += 1
 
+    for ln in (ln for ln in lines if "→ to promote:" in ln):
+        seen = parse_date(m.group(1)) if (m := re.search(r"verified (\d{4}-\d{2}-\d{2})", ln)) else None
+        if seen is None or (today - seen).days > cfg.stale_days:
+            warn("promotion-pending", f"`→ to promote:` older than {cfg.stale_days} days or undated; "
+                 f"promote it or drop it: {ln.strip()[:80]}")
+
     pointers = [ln.strip() for ln in lines if "→ promoted to" in ln]
     if pointers:
         warn("promoted-pointers", f"{len(pointers)} promoted pointer(s); delete each once its PR merges")
@@ -392,8 +450,11 @@ def cmd_new(args: argparse.Namespace, root: Path, cfg: Config, today: date) -> i
     path = d / f"{PREFIX}{slug}.md"
     if path.exists():
         raise UsageError(f"{path} already exists; update it instead")
-    if (root == d or root in d.parents) and not is_ignored(root, path):
-        raise UsageError(f"{path} would be tracked by git; add `{cfg.dir}/` to .gitignore first")
+    if d == root:
+        raise UsageError(f"[handoff].dir {cfg.dir!r} is the repository root; use a folder inside it, such as .local")
+    holder = root if root in d.parents else enclosing_repo(d)
+    if holder and not is_ignored(holder, path):
+        raise UsageError(f"{path} would be tracked by git; add `{os.path.relpath(d, holder)}/` to .gitignore first")
     d.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -471,7 +532,8 @@ def cmd_backup(args: argparse.Namespace, root: Path, cfg: Config, today: date) -
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="handoff.py", description="Create, find, list and lint agent handoff files.")
     p.add_argument("--repo", default=".", help="any path inside the git repository (default: cwd)")
-    p.add_argument("--config", help="standalone TOML settings; default: [handoff] in cadence.toml")
+    p.add_argument("--config", help="TOML file with a [handoff] table (or its keys at top level); "
+                   "default: cadence.toml in the main worktree")
     p.add_argument("--today", help=argparse.SUPPRESS)  # tests pin the date
     p.add_argument("--version", action="version", version=f"handoff {VERSION}")
     sub = p.add_subparsers(dest="cmd", required=True)

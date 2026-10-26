@@ -31,7 +31,7 @@ echo ".skill-candidates/" >> .gitignore        # keep them out of version contro
 Try it on invented data first, without touching your real sessions:
 
 ```bash
-python3 tools/skill-miner/examples/demo.py
+python3 contrib/skill-miner/examples/demo.py
 ```
 
 Requirements: Python 3.11+ and `git`. No packages to install.
@@ -226,5 +226,5 @@ The same input always produces the same output.
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tools/skill-miner/tests -v
+python3 -m unittest discover -s contrib/skill-miner/tests -v
 ```

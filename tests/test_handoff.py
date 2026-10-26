@@ -253,6 +253,105 @@ class HandoffTest(unittest.TestCase):
         rc, out, _ = self.run_cli("resolve", "PROJ-7")
         self.assertEqual((rc, Path(out.strip())), (0, p))
 
+    def cli_at(self, where: Path, *argv: str) -> tuple[int, str, str]:
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = handoff.main(["--repo", str(where), "--today", TODAY, *argv])
+        return rc, out.getvalue(), err.getvalue()
+
+    def commit(self, repo: Path) -> None:
+        git("-c", "user.email=sam@example.com", "-c", "user.name=Sam", "commit", "-q", "--allow-empty",
+            "-m", "init", cwd=repo)
+
+    def test_from_a_subdirectory(self):
+        sub = self.repo / "src" / "deep"
+        sub.mkdir(parents=True)
+        rc, out, err = self.cli_at(sub, "new", "theme-sub")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(Path(out.strip()).parent, self.dir)
+
+    def test_submodule_main_and_linked_worktrees(self):
+        self.commit(self.repo)
+        sup = self.tmp / "sup"
+        sup.mkdir()
+        git("init", "-q", "-b", "main", cwd=sup)
+        git("-c", "protocol.file.allow=always", "submodule", "add", "-q", str(self.repo), "sm", cwd=sup)
+        sm = sup / "sm"
+        (sm / ".git").is_file() or self.fail("expected a gitfile in the submodule")
+        rc, _, err = self.cli_at(sm, "new", "theme-in-submodule")
+        self.assertEqual(rc, 2, "the submodule has no .gitignore yet")
+        (sm / ".gitignore").write_text(".local/\n")
+        rc, out, err = self.cli_at(sm, "new", "theme-in-submodule")
+        self.assertEqual(rc, 0, err)
+        p = Path(out.strip())
+        self.assertEqual(p.parent, sm / ".local")
+        wt = self.tmp / "sm-wt"
+        git("worktree", "add", "-q", "-b", "side", str(wt), cwd=sm)
+        rc, out, _ = self.cli_at(wt, "resolve", "theme-in-submodule")
+        self.assertEqual((rc, Path(out.strip())), (0, p))
+
+    def test_separate_git_dir(self):
+        work, store = self.tmp / "sep-work", self.tmp / "sep-store"
+        git("init", "-q", "-b", "main", "--separate-git-dir", str(store), str(work), cwd=self.tmp)
+        (work / ".gitignore").write_text(".local/\n")
+        rc, out, err = self.cli_at(work, "new", "theme-sep")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(Path(out.strip()).parent, work.resolve() / ".local")
+
+    def test_bare_repository_is_refused(self):
+        bare = self.tmp / "bare.git"
+        git("init", "-q", "--bare", str(bare), cwd=self.tmp)
+        rc, _, err = self.cli_at(bare, "list")
+        self.assertEqual(rc, 2)
+        self.assertIn("bare repository", err)
+
+    def test_bad_settings_are_usage_errors_not_tracebacks(self):
+        for body in ('[handoff]\nfile_max_lines = "300"\n', "[handoff]\ndir = 5\n", "[handoff]\nstale_days = 0\n",
+                     "[handoff]\nresume_max_lines = true\n", 'handoff = "x"\n'):
+            (self.repo / "cadence.toml").write_text(body)
+            rc, _, err = self.run_cli("list")
+            self.assertEqual(rc, 2, body)
+            self.assertIn("[handoff]", err, body)
+
+    def test_settings_file_with_a_handoff_table_or_top_level_keys(self):
+        self.write("PROJ-12-widget-cache", GOOD.format(checkout=self.repo))
+        for body in ("[handoff]\nfile_max_lines = 10\n", "file_max_lines = 10\n"):
+            cfg = self.tmp / "settings.toml"
+            cfg.write_text(body)
+            _, out, _ = self.run_cli("--config", str(cfg), "lint", "--json")
+            self.assertIn("file-too-long", {f["code"] for f in json.loads(out)["PROJ-12-widget-cache"]}, body)
+
+    def test_dir_outside_the_repo_is_checked_where_it_lives(self):
+        other = self.tmp / "notes"
+        other.mkdir()
+        git("init", "-q", cwd=other)
+        (self.repo / "cadence.toml").write_text('[handoff]\ndir = "../notes/h"\n')
+        rc, _, err = self.run_cli("new", "theme-outside")
+        self.assertEqual(rc, 2)
+        self.assertIn("would be tracked", err)
+        (other / ".gitignore").write_text("h/\n")
+        self.assertEqual(self.run_cli("new", "theme-outside")[0], 0)
+        plain = self.tmp / "plain"
+        (self.repo / "cadence.toml").write_text(f'[handoff]\ndir = "{plain}"\n')
+        self.assertEqual(self.run_cli("new", "theme-plain")[0], 0)
+
+    def test_dir_cannot_be_the_repo_root(self):
+        (self.repo / "cadence.toml").write_text('[handoff]\ndir = "."\n')
+        rc, _, err = self.run_cli("new", "theme-root")
+        self.assertEqual(rc, 2)
+        self.assertIn("repository root", err)
+
+    def test_stale_or_undated_pending_promotion_warns(self):
+        g = GOOD.format(checkout=self.repo).replace(
+            "## Facts\n",
+            "## Facts\n- → to promote: cache TTL rule → docs/cache.md — source: config · verified 2098-12-01\n"
+            "- → to promote: retry rule → docs/retry.md — source: config · verified 2099-01-09\n")
+        self.write("PROJ-12-widget-cache", g)
+        _, out, _ = self.run_cli("lint", "--json")
+        found = [f for f in json.loads(out)["PROJ-12-widget-cache"] if f["code"] == "promotion-pending"]
+        self.assertEqual(len(found), 1)
+        self.assertIn("cache TTL", found[0]["message"])
+
     # --- isolation ----------------------------------------------------------------------
     def test_no_network_and_only_git(self):
         self.write("PROJ-12-widget-cache", GOOD.format(checkout=self.repo))

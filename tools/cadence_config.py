@@ -363,20 +363,13 @@ def load(start: Path | None = None, *, root: Path | None = None) -> Config:
     for name, value in (("max_leaves", cfg.max_leaves), ("max_depth", cfg.max_depth), ("max_options", cfg.max_options)):
         if value < 1:
             raise ConfigError(f"{path}: [fanout].{name} must be at least 1")
-    # tools/handoff.py reads [handoff] itself; checked here too so a typo fails
-    # where every other config mistake does.
-    handoff = raw.get("handoff", {})
-    handoff_keys = {"dir", "resume_max_lines", "file_max_lines", "archive_max_lines",
-                    "log_entry_max_lines", "stale_days"}
-    if not isinstance(handoff, dict):
-        raise ConfigError(f"{path}: [handoff] must be a table")
-    for key, value in handoff.items():
-        if key not in handoff_keys:
-            raise ConfigError(f"{path}: unknown key [handoff].{key}. Known: {', '.join(sorted(handoff_keys))}")
-        if key == "dir" and not (isinstance(value, str) and value):
-            raise ConfigError(f"{path}: [handoff].dir must be a non-empty path")
-        if key != "dir" and not (isinstance(value, int) and not isinstance(value, bool) and value >= 1):
-            raise ConfigError(f"{path}: [handoff].{key} must be a whole number of at least 1")
+    # tools/handoff.py reads [handoff] itself, with the same checks, so a typo
+    # fails here too, where every other config mistake does.
+    if str(Path(__file__).resolve().parent) not in sys.path:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import handoff  # noqa: E402 - a sibling in tools/
+    for problem in handoff.config_errors(raw.get("handoff", {})):
+        raise ConfigError(f"{path}: {problem}")
     return cfg
 
 
